@@ -53,3 +53,15 @@ python3 -m mlx_ming_tts.pipeline   --model-dir models/Ming-3.0-tts-0.5b-mlx   --
 ```bash
 python3 -m mlx_ming_tts.pipeline   --model-dir models/Ming-3.0-tts-0.5b-mlx   --text "Hello! This is Ming-3.0-tts running completely on Apple Silicon with Apple MLX."   --ip "US_Emma"   --out "output/english_sample.wav"
 ```
+
+### 3. 零样本声音克隆 (Zero-Shot Voice Cloning)
+
+提供一段 3~10 秒的参考音频及对应转写文本，即可一键克隆音色：
+```bash
+python3 -m mlx_ming_tts.pipeline \
+  --model-dir models/Ming-3.0-tts-0.5b-mlx \
+  --ref-audio "path/to/reference.wav" \
+  --prompt-text "参考音频的准确朗读文本" \
+  --text "需要使用该音色合成的新文本" \
+  --out "output/cloned_voice.wav"
+```

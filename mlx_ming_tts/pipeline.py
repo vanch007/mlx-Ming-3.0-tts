@@ -149,6 +149,44 @@ def save_wav(audio, path, sample_rate=44100):
         wf.writeframes(pcm_bytes)
 
 
+def load_and_resample_prompt(wav_path, target_sr=44100):
+    """Pure MLX / standard wave loader and resampler for reference audio."""
+    with wave.open(wav_path, 'rb') as wf:
+        sr = wf.getframerate()
+        n = wf.getnframes()
+        channels = wf.getnchannels()
+        sampwidth = wf.getsampwidth()
+        data = wf.readframes(n)
+
+    if sampwidth == 2:
+        import struct
+        fmt = f"<{n * channels}h"
+        raw = struct.unpack(fmt, data)
+        raw_arr = [float(x) / 32768.0 for x in raw]
+    else:
+        raise ValueError(f"Unsupported sample width: {sampwidth}")
+
+    if channels > 1:
+        raw_arr = [sum(raw_arr[i*channels : (i+1)*channels]) / channels for i in range(n)]
+
+    wav_mx = mx.array(raw_arr, dtype=mx.float32)
+
+    if sr != target_sr:
+        target_len = int(len(raw_arr) * target_sr / sr)
+        src_idx = mx.linspace(0, len(raw_arr) - 1, target_len)
+        src_left = mx.floor(src_idx).astype(mx.int32)
+        src_right = mx.minimum(src_left + 1, len(raw_arr) - 1)
+        src_frac = src_idx - src_left.astype(mx.float32)
+        wav_mx = wav_mx[src_left] * (1.0 - src_frac) + wav_mx[src_right] * src_frac
+
+    wav_mx = wav_mx[None, :]
+    align = int(1 / 12.5 * 1 * target_sr)
+    rem = wav_mx.shape[-1] % align
+    if rem:
+        wav_mx = mx.concatenate([wav_mx, mx.zeros((1, align - rem))], axis=1)
+    return wav_mx
+
+
 class MingMLX:
     def __init__(self, model_dir, dtype="auto"):
         self.model_dir = model_dir
@@ -169,11 +207,18 @@ class MingMLX:
         self.sample_rate = self.model.atc.get("sample_rate", 44100)
 
     def generate(self, prompt, text, instruction=None, ip=None, style=None,
+                 ref_audio=None, prompt_text=None,
                  sigma=0.15, cfg=2.0, steps=10, max_decode_steps=200,
                  noise_seed=42, trim_silence=True, split_long_text=True, **kwargs):
         """Generate speech waveform purely in MLX with quality-preserving defaults."""
         is_chinese = bool(re.search(r'[一-龥]', text))
-        if instruction is None:
+        prompt_waveform = None
+
+        if ref_audio is not None and prompt_text is not None:
+            prompt_waveform = load_and_resample_prompt(ref_audio, self.sample_rate)
+            if instruction is None and style is not None:
+                instruction = build_voice_design_instruction(style, is_chinese=is_chinese)
+        elif instruction is None:
             if ip is not None:
                 instruction = build_ip_instruction(ip, is_chinese=is_chinese)
             elif style is not None:
@@ -182,7 +227,7 @@ class MingMLX:
                 default_ip = "灵小萌" if is_chinese else "US_Emma"
                 instruction = build_ip_instruction(default_ip, is_chinese=is_chinese)
 
-        if split_long_text:
+        if split_long_text and (prompt_waveform is None):
             fragments = split_text_fragments(text, max_len=30)
         else:
             fragments = [text]
@@ -193,6 +238,8 @@ class MingMLX:
             latents = []
             for sampled, last in self.model.sample(
                 prompt, frag, instruction=instruction,
+                prompt_waveform=prompt_waveform,
+                prompt_text=prompt_text,
                 max_decode_steps=max_decode_steps, cfg=cfg, sigma=sigma,
                 steps=steps, noise_seed=seed, **kwargs
             ):
@@ -213,6 +260,8 @@ def main():
     ap.add_argument("--text", required=True)
     ap.add_argument("--ip", default=None, help="Built-in IP voice name (e.g. 灵小萌, 灵小锋, 灵小柔, US_Emma, UK_George)")
     ap.add_argument("--style", default=None, help="Voice style prompt")
+    ap.add_argument("--ref-audio", default=None, help="Path to reference WAV file for voice cloning")
+    ap.add_argument("--prompt-text", default=None, help="Transcript of reference WAV file")
     ap.add_argument("--out", default="output/mlx_out.wav")
     ap.add_argument("--max-steps", type=int, default=200)
     ap.add_argument("--cfg", type=float, default=2.0)
@@ -224,6 +273,7 @@ def main():
     ming = MingMLX(args.model_dir, dtype=args.dtype)
     wav = ming.generate(
         args.prompt, args.text, ip=args.ip, style=args.style,
+        ref_audio=args.ref_audio, prompt_text=args.prompt_text,
         max_decode_steps=args.max_steps, cfg=args.cfg, sigma=args.sigma,
         noise_seed=args.seed
     )
