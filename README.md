@@ -119,3 +119,19 @@ cd /Users/vanch/mlx-Ming-3.0-tts/demo_page && python3 -m http.server 8765 --bind
 # 下载 8-bit 主力推荐版
 huggingface-cli download vanch007/Ming-3.0-tts-0.5b-mlx-8bit --local-dir models/Ming-3.0-tts-0.5b-mlx-8bit
 ```
+
+
+## 🌟 Ming-3.0-tts-tiny (7.9B MoE + KDA 线性注意力)
+
+项目现已完整支持官方 **Ming-3.0-tts-tiny** 架构：
+- **混合注意力模型**：MLA（多头潜在注意力）+ 纯原生 MLX 实现的 **Kimi-Delta Attention (KDA)** 线性注意力，彻底摆脱 Linux Triton/CUDA 依赖。
+- **128 专家 MoE 架构**：7.9B 总参数量，激活仅 1.3B。
+- **独占能力**：原生支持多人/双人对话剧本（`podcast`）多角色交替发音。
+
+```bash
+# 1. 运行 Tiny 8-bit 量化模型 (9.78 GB)
+python3 -m mlx_ming_tts.pipeline   --model-dir models/Ming-3.0-tts-tiny-mlx-8bit   --text "傍晚的风从山口吹过来，远处的云慢慢染成了金色。"   --out "output/tiny_out.wav"
+
+# 2. 运行 Tiny 4-bit 量化模型 (5.42 GB)
+python3 -m mlx_ming_tts.pipeline   --model-dir models/Ming-3.0-tts-tiny-mlx-4bit   --text "超轻量 4-bit Tiny 模型测试。"   --out "output/tiny_4bit.wav"
+```

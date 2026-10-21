@@ -23,6 +23,7 @@ from transformers import AutoTokenizer
 
 from mlx_ming_tts.config import load_config, get_llm_config
 from mlx_ming_tts.models.bailingmm import BailingMM
+from mlx_ming_tts.models.lingv3_tts import LingV3TTS
 
 
 DEFAULT_TTS_PROMPT = "Please generate speech based on the following description.\n"
@@ -196,7 +197,12 @@ class MingMLX:
             dtype = metadata.get("dtype", dtype)
         self.dtype = resolve_dtype(model_dir, dtype)
         self.tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
-        self.model = BailingMM(model_dir, self.tokenizer)
+        is_tiny = metadata is not None and metadata.get("model_type") == "lingv3_tts"
+        if is_tiny:
+            print("Detected Ming-3.0-tts-tiny (LingV3TTS MoE+KDA) model architecture.")
+            self.model = LingV3TTS(model_dir, self.tokenizer)
+        else:
+            self.model = BailingMM(model_dir, self.tokenizer)
 
         if metadata is not None:
             # Check if weights are prequantized
