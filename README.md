@@ -65,3 +65,30 @@ python3 -m mlx_ming_tts.pipeline \
   --text "需要使用该音色合成的新文本" \
   --out "output/cloned_voice.wav"
 ```
+
+### 4. 模型量化与轻量化部署 (8-bit / 4-bit)
+
+为了在轻薄 Mac 设备上实现超轻显存占用与极致推理速度，项目原生支持 MLX 8-bit 和 4-bit 权重量化（保持声学敏感头及对齐层高精度，其余线性层采用 `group_size=64` 量化）：
+
+| 规格版本 | 权重体积 | 生成耗时 (6.5s 音频) | 实时率 (RTF) | ASR 字准率 (CER) |
+| :--- | :--- | :--- | :--- | :--- |
+| **16-bit (bfloat16)** | 3.0 GB | 5.65 秒 | 0.844 | 100% |
+| **8-bit (int8)** | **1.7 GB** | **2.53 秒** | **0.395** | **100%** |
+| **4-bit (int4)** | **1.0 GB** | **2.55 秒** | **0.374** | **98%** |
+
+直接指定对应量化目录即可无缝加载：
+```bash
+# 使用 8-bit 量化模型（仅 1.7GB，速度提升 2.1 倍）
+python3 -m mlx_ming_tts.pipeline \
+  --model-dir models/Ming-3.0-tts-0.5b-mlx-8bit \
+  --text "八比特量化模型极速语音合成测试。" \
+  --ip "灵小萌" \
+  --out "output/sample_8bit.wav"
+
+# 使用 4-bit 量化模型（仅 1.0GB，超低内存占用）
+python3 -m mlx_ming_tts.pipeline \
+  --model-dir models/Ming-3.0-tts-0.5b-mlx-4bit \
+  --text "四比特量化模型极速语音合成测试。" \
+  --ip "灵小萌" \
+  --out "output/sample_4bit.wav"
+```

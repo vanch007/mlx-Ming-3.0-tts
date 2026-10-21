@@ -18,6 +18,7 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 import mlx.core as mx
+import mlx.nn as nn
 from transformers import AutoTokenizer
 
 from mlx_ming_tts.config import load_config, get_llm_config
@@ -196,7 +197,24 @@ class MingMLX:
         self.dtype = resolve_dtype(model_dir, dtype)
         self.tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
         self.model = BailingMM(model_dir, self.tokenizer)
+
         if metadata is not None:
+            # Check if weights are prequantized
+            q_meta = metadata.get("quantization")
+            if q_meta:
+                q_bits = q_meta.get("bits", 8)
+                q_group = q_meta.get("group_size", 64)
+                print(f"Applying {q_bits}-bit quantization structure (group_size={q_group})...")
+                def predicate(path, m):
+                    if not isinstance(m, nn.Linear):
+                        return False
+                    if any(k in path for k in ('head_out', 'stop_head', 'spk_head')):
+                        return False
+                    if m.weight.shape[-1] % q_group != 0:
+                        return False
+                    return True
+                nn.quantize(self.model, group_size=q_group, bits=q_bits, class_predicate=predicate)
+
             weights_file = metadata.get("weights_file", "mlx_weights.safetensors")
             weights_path = os.path.join(model_dir, weights_file)
             print(f"Loading preconverted MLX weights from {weights_path}...")
