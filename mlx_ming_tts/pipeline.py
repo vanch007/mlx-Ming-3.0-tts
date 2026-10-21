@@ -19,7 +19,10 @@ if _PROJECT_ROOT not in sys.path:
 
 import mlx.core as mx
 import mlx.nn as nn
+import soundfile as sf
+import torch
 from transformers import AutoTokenizer
+from mlx_ming_tts.bridge.speaker import SpeakerEmbedder
 
 from mlx_ming_tts.config import load_config, get_llm_config
 from mlx_ming_tts.models.bailingmm import BailingMM
@@ -247,10 +250,20 @@ class MingMLX:
         is_chinese = bool(re.search(r'[一-龥]', text))
         prompt_waveform = None
 
-        if ref_audio is not None and prompt_text is not None:
-            prompt_waveform = load_and_resample_prompt(ref_audio, self.sample_rate)
-            if instruction is None and style is not None:
-                instruction = build_voice_design_instruction(style, is_chinese=is_chinese)
+        spk_emb = kwargs.get('spk_emb')
+        if ref_audio is not None:
+            if prompt_text is not None:
+                prompt_waveform = load_and_resample_prompt(ref_audio, self.sample_rate)
+                if instruction is None and style is not None:
+                    instruction = build_voice_design_instruction(style, is_chinese=is_chinese)
+            else:
+                # 官方规范 speaker_only 模式 (Basic / Emotion / Dialect)
+                if spk_emb is None:
+                    onnx_path = os.path.join(self.model_dir, "campplus.onnx")
+                    if os.path.exists(onnx_path):
+                        embedder = SpeakerEmbedder(onnx_path)
+                        w, _ = sf.read(ref_audio)
+                        spk_emb = embedder(torch.from_numpy(w).float().unsqueeze(0))
         elif instruction is None:
             if ip is not None:
                 instruction = build_ip_instruction(ip, is_chinese=is_chinese)
@@ -270,7 +283,7 @@ class MingMLX:
             seed = (noise_seed + i) if noise_seed is not None else None
             latents = []
             for sampled, last in self.model.sample(
-                prompt, frag, instruction=instruction,
+                prompt, frag, spk_emb=spk_emb, instruction=instruction,
                 prompt_waveform=prompt_waveform,
                 prompt_text=prompt_text,
                 max_decode_steps=max_decode_steps, cfg=cfg, sigma=sigma,
