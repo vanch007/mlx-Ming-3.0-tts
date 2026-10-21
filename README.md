@@ -1,137 +1,169 @@
 # mlx-Ming-3.0-tts
 
-Pure Apple Silicon MLX port of [inclusionAI/Ming-3.0-tts](https://github.com/inclusionAI/Ming-3.0-tts) (Qwen2 / BailingMoE + Flow Matching + AudioVAE).
+Pure Apple Silicon **MLX** native port of [inclusionAI/Ming-3.0-tts](https://github.com/inclusionAI/Ming-3.0-tts) — supporting both the **0.5B Dense** and **Tiny 7.9B MoE (128 Experts + KDA)** models across multiple precisions (bf16 / 8-bit / 4-bit).
 
-## 核心特性
+Completely free of Linux-only `triton` kernels and PyTorch/NumPy vocoder runtime dependencies, running natively on Apple Silicon Metal GPUs (M1/M2/M3/M4).
 
-- **纯 MLX 原生运行时**：
-  - 声学解码器与 ISTFT 逆短时傅里叶变换完全由 `mx.fft.irfft` 与 MLX 数组切片重叠相加（OLA）原生实现，完全消除 NumPy/PyTorch 运行时依赖。
-  - 音频保存基于 Python 标准库 `wave`，直接输出 44.1kHz 16-bit 单声道 PCM WAV。
-- **长文本自然连贯度优化**：
-  - 严格匹配 Qwen2 AudioVAE 解码器的 `sliding_window=64` 滑动窗口注意力机制，消除长文本后半段音质退化。
-  - 严格对齐官方 Dense 0.5B 的 ChatML Token 契约（指令终止符 `<|im_end|>`），消除自回归先验漂移与发音断续。
-  - 支持官方 100+ 预置 IP 音色（如 `灵小萌`、`灵小锋`、`US_Emma`）及自然语言音色设计。
+---
 
-## 目录结构
+## 🌟 核心特性 (Key Features)
 
-```text
-mlx-Ming-3.0-tts/
-├── mlx_ming_tts/
-│   ├── models/
-│   │   ├── audio_vae.py       # 纯 MLX AudioVAE 编解码器与 ISTFT 重构头
-│   │   ├── bailingmm.py       # 文本-声学自回归与 Flow Matching 协调调度
-│   │   ├── flow.py            # FlowLoss、DiT 与 Euler ODE 求解器
-│   │   ├── qwen2.py           # 支持滑动窗口注意力与 KV Cache 的 Qwen2 模型
-│   │   └── bailing_moe.py     # Bailing MoE 架构支持
-│   ├── ops/
-│   │   ├── attention.py       # 包含 sliding_window 的因果掩码与 SDPA
-│   │   ├── norm.py            # RMSNorm 算子
-│   │   └── rope.py            # 旋转位置编码 RoPE
-│   ├── convert.py             # HF 权重一键转标准 MLX safetensors
-│   └── pipeline.py            # 高层语音合成与音频导出入口
-└── models/
-    ├── Ming-3.0-tts-0.5b/     # 原始 HF 格式权重
-    └── Ming-3.0-tts-0.5b-mlx/ # 转换后的纯 MLX safetensors 权重与配置文件
-```
+- **双模型双架构支持 (Dual Architecture Support)**：
+  - **0.5B Dense Architecture**：轻量高速，零样本声音克隆 (Zero-Shot Clone) 还原度高，极低显存占用。
+  - **Tiny 7.9B MoE Architecture**：128 路由专家 + 1 共享专家 + KDA 循环线性注意力，独家支持双人交替对话剧本 (Podcast Dialogue)、精细情感与方言控制。
+- **纯 MLX 原生声学引擎 (Pure MLX Native Engine)**：
+  - 音频合成核心与逆短时傅里叶变换 (ISTFT) 基于 `mx.fft.irfft` 与 MLX 重叠相加 (OLA) 原生实现，消除 NumPy/PyTorch 运行时依赖。
+  - 音频保存基于 Python 标准库 `wave`，直接输出 44.1kHz 16-bit PCM WAV。
+- **脱离 Triton 束缚 (Zero Triton Dependency)**：
+  - 针对原模型中依赖 Linux Triton 的 KDA (Kimi Delta Attention) 算子，在 MLX 中实现原生向量化递归更新，保持数值精度对齐的同时享受 Metal 原生硬件加速。
+- **自回归状态持久缓存 (Persistent Step Caching)**：
+  - 原生实现 `KDACache`（循环状态与 1D 卷积缓存）与 `MLACache`（键值缓存），杜绝 step 间失忆导致的声学崩溃与噪音。
+- **全场景能力覆盖 (Full Capabilities)**：
+  - 支持零样本声音克隆、双人对话剧本、中文/英文副语言控制（`[Laughter]` 笑声、`[Sigh]` 叹气）、官方内置音色（灵小萌、灵小锋等）、复杂电商混合文本归一化、多语种（日/韩/法/英）及四川方言调腔控制。
 
-## 快速使用
+---
 
-### 1. 模型转换（若已转换可跳过）
+## 📦 Hugging Face 开源模型矩阵 (Model Hub)
 
-```bash
-python3 -m mlx_ming_tts.convert   --hf-dir models/Ming-3.0-tts-0.5b   --out-dir models/Ming-3.0-tts-0.5b-mlx   --dtype bfloat16
-```
+已将全部 6 个版本的纯 MLX safetensors 权重发布至 Hugging Face，每个仓库均内置 Model Card 与测试音频样本：
 
-### 2. 语音合成
+### 1. Ming-3.0-tts-tiny (7.9B MoE · 128 Experts + KDA)
 
-合成中文（使用预置音色 `灵小萌`）：
-```bash
-python3 -m mlx_ming_tts.pipeline   --model-dir models/Ming-3.0-tts-0.5b-mlx   --text "你好，我是纯MLX架构驱动的Ming语音合成系统。现在声音更加清晰自然了。"   --ip "灵小萌"   --out "output/chinese_sample.wav"
-```
-
-合成英文（使用预置音色 `US_Emma`）：
-```bash
-python3 -m mlx_ming_tts.pipeline   --model-dir models/Ming-3.0-tts-0.5b-mlx   --text "Hello! This is Ming-3.0-tts running completely on Apple Silicon with Apple MLX."   --ip "US_Emma"   --out "output/english_sample.wav"
-```
-
-### 3. 零样本声音克隆 (Zero-Shot Voice Cloning)
-
-提供一段 3~10 秒的参考音频及对应转写文本，即可一键克隆音色：
-```bash
-python3 -m mlx_ming_tts.pipeline \
-  --model-dir models/Ming-3.0-tts-0.5b-mlx \
-  --ref-audio "path/to/reference.wav" \
-  --prompt-text "参考音频的准确朗读文本" \
-  --text "需要使用该音色合成的新文本" \
-  --out "output/cloned_voice.wav"
-```
-
-### 4. 模型量化与轻量化部署 (8-bit / 4-bit)
-
-为了在轻薄 Mac 设备上实现超轻显存占用与极致推理速度，项目原生支持 MLX 8-bit 和 4-bit 权重量化（保持声学敏感头及对齐层高精度，其余线性层采用 `group_size=64` 量化）：
-
-| 规格版本 | 权重体积 | 生成耗时 (6.5s 音频) | 实时率 (RTF) | ASR 字准率 (CER) |
+| 模型仓库 ID | 精度类型 | 权重体积 | 核心特性与适用场景 | 链接 |
 | :--- | :--- | :--- | :--- | :--- |
-| **16-bit (bfloat16)** | 3.0 GB | 5.65 秒 | 0.844 | 100% |
-| **8-bit (int8)** | **1.7 GB** | **2.53 秒** | **0.395** | **100%** |
-| **4-bit (int4)** | **1.0 GB** | **2.55 秒** | **0.374** | **98%** |
+| **`vanch007/Ming-3.0-tts-tiny-mlx-8bit`** | 8-bit 整数量化 | **9.78 GB** | **推荐主力版**：平衡极致音质与极速推理，实测 RTF ~1.68 | [🤗 访问仓库](https://huggingface.co/vanch007/Ming-3.0-tts-tiny-mlx-8bit) |
+| **`vanch007/Ming-3.0-tts-tiny-mlx-4bit`** | 4-bit 极限压缩 | **5.42 GB** | **超轻量版**：显存节省 70%，适合 8GB / 16GB 统一内存设备 | [🤗 访问仓库](https://huggingface.co/vanch007/Ming-3.0-tts-tiny-mlx-4bit) |
+| **`vanch007/Ming-3.0-tts-tiny-mlx-bf16`** | bfloat16 全精度 | **17.96 GB** | **无损全精度版**：100% 原始权重浮点声学表现 | [🤗 访问仓库](https://huggingface.co/vanch007/Ming-3.0-tts-tiny-mlx-bf16) |
 
-直接指定对应量化目录即可无缝加载：
-```bash
-# 使用 8-bit 量化模型（仅 1.7GB，速度提升 2.1 倍）
-python3 -m mlx_ming_tts.pipeline \
-  --model-dir models/Ming-3.0-tts-0.5b-mlx-8bit \
-  --text "八比特量化模型极速语音合成测试。" \
-  --ip "灵小萌" \
-  --out "output/sample_8bit.wav"
+### 2. Ming-3.0-tts-0.5b (0.5B Dense Architecture)
 
-# 使用 4-bit 量化模型（仅 1.0GB，超低内存占用）
-python3 -m mlx_ming_tts.pipeline \
-  --model-dir models/Ming-3.0-tts-0.5b-mlx-4bit \
-  --text "四比特量化模型极速语音合成测试。" \
-  --ip "灵小萌" \
-  --out "output/sample_4bit.wav"
-```
-
-### 5. 试听对比页面 (Interactive Demo Page)
-
-项目中已集成基于现代化暗黑主题的交互式试听对比页面，支持在浏览器中同时横向试听 **官方原始 Demo**、**MLX bf16 (全精度)**、**MLX 8-bit (整数量化)** 与 **MLX 4-bit (超轻量化)** 四路音频，并直观对比耗时、RTF 和模型体积：
-
-```bash
-# 启动本地试听服务器
-cd /Users/vanch/mlx-Ming-3.0-tts/demo_page && python3 -m http.server 8765 --bind 0.0.0.0 --directory demo_page
-```
-打开浏览器访问 [http://127.0.0.1:8765/index.html](http://127.0.0.1:8765/index.html) 即可播放试听与评测。
-
-
-## 📦 Hugging Face 开源模型发布 (Hugging Face Hub)
-
-三个精度的 MLX 模型已全部发布至 Hugging Face，并在模型页面附带了实测生成的测试音频，支持直接通过 `huggingface-cli` 一键拉取：
-
-| 模型仓库 | 精度与量化 | 权重体积 | 推荐场景 | 在线地址 |
+| 模型仓库 ID | 精度类型 | 权重体积 | 核心特性与适用场景 | 链接 |
 | :--- | :--- | :--- | :--- | :--- |
-| **[vanch007/Ming-3.0-tts-0.5b-mlx-bf16](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-bf16)** | BFloat16 (全精度) | 3.08 GB | 原生高保真基准对照 | [HF 仓库页面](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-bf16) |
-| **[vanch007/Ming-3.0-tts-0.5b-mlx-8bit](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-8bit)** | **8-bit (整数量化)** | **1.76 GB** | **主力推荐：速度提升 2.1 倍，品质无损** | [HF 仓库页面](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-8bit) |
-| **[vanch007/Ming-3.0-tts-0.5b-mlx-4bit](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-4bit)** | 4-bit (超轻量) | 1.06 GB | 超轻显存（仅 1GB）设备部署 | [HF 仓库页面](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-4bit) |
+| **`vanch007/Ming-3.0-tts-0.5b-mlx-8bit`** | 8-bit 整数量化 | **1.76 GB** | **推荐主力版**：低显存极速运行，实测 RTF ~1.06 | [🤗 访问仓库](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-8bit) |
+| **`vanch007/Ming-3.0-tts-0.5b-mlx-4bit`** | 4-bit 极限压缩 | **1.06 GB** | **极速轻量版**：体积仅 1GB，超低内存开销 | [🤗 访问仓库](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-4bit) |
+| **`vanch007/Ming-3.0-tts-0.5b-mlx-bf16`** | bfloat16 全精度 | **3.08 GB** | **全精度版**：高保真稠密声学基准 | [🤗 访问仓库](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-bf16) |
 
-直接通过 CLI 一键下载任意版本：
+---
+
+## 🎧 离线单文件试听对比报告 (Offline Demo Page)
+
+本项目交付了完全自包含的离线单文件对比页面：
+
+- **文件路径**：`standalone_compare.html`（或 `demo_page/index.html`）
+- **特点**：所有测试音频均通过 Base64 内嵌在单个 HTML 文件内，**无需启动任何本地 HTTP 服务或端口**，在 Mac 上直接双击或拖入任意浏览器（Chrome / Safari / Edge）即可播放。
+- **对比维度**：汇集了 15 组全场景同题同台对比卡片（基准原声 vs 0.5B 三精度 vs Tiny 7.9B 三精度，共 6 个版本同屏试听对比）。
+
+---
+
+## 🚀 快速上手 (Quick Start)
+
+### 1. 环境准备
+
 ```bash
-# 下载 8-bit 主力推荐版
+git clone https://github.com/vanch007/mlx-Ming-3.0-tts.git
+cd mlx-Ming-3.0-tts
+pip install mlx transformers soundfile onnxruntime
+```
+
+### 2. 下载推荐主力模型
+
+```bash
+# 下载 Tiny 7.9B MoE 8-bit 主力模型
+huggingface-cli download vanch007/Ming-3.0-tts-tiny-mlx-8bit --local-dir models/Ming-3.0-tts-tiny-mlx-8bit
+
+# 下载 0.5B 8-bit 主力模型
 huggingface-cli download vanch007/Ming-3.0-tts-0.5b-mlx-8bit --local-dir models/Ming-3.0-tts-0.5b-mlx-8bit
 ```
 
+### 3. CLI 快速推理
 
-## 🌟 Ming-3.0-tts-tiny (7.9B MoE + KDA 线性注意力)
-
-项目现已完整支持官方 **Ming-3.0-tts-tiny** 架构：
-- **混合注意力模型**：MLA（多头潜在注意力）+ 纯原生 MLX 实现的 **Kimi-Delta Attention (KDA)** 线性注意力，彻底摆脱 Linux Triton/CUDA 依赖。
-- **128 专家 MoE 架构**：7.9B 总参数量，激活仅 1.3B。
-- **独占能力**：原生支持多人/双人对话剧本（`podcast`）多角色交替发音。
-
+**① 官方推荐内置音色 (灵小萌)**：
 ```bash
-# 1. 运行 Tiny 8-bit 量化模型 (9.78 GB)
-python3 -m mlx_ming_tts.pipeline   --model-dir models/Ming-3.0-tts-tiny-mlx-8bit   --text "傍晚的风从山口吹过来，远处的云慢慢染成了金色。"   --out "output/tiny_out.wav"
-
-# 2. 运行 Tiny 4-bit 量化模型 (5.42 GB)
-python3 -m mlx_ming_tts.pipeline   --model-dir models/Ming-3.0-tts-tiny-mlx-4bit   --text "超轻量 4-bit Tiny 模型测试。"   --out "output/tiny_4bit.wav"
+python3 -m mlx_ming_tts.pipeline \
+  --model-dir models/Ming-3.0-tts-tiny-mlx-8bit \
+  --text "夜晚的微风吹散了白天的喧嚣，愿好梦常伴你左右。" \
+  --ip "灵小萌" \
+  --out "output_lingxiaomeng.wav"
 ```
+
+**② 独家双人角色交替对话剧本 (Podcast Dialogue)**：
+```bash
+python3 -m mlx_ming_tts.pipeline \
+  --model-dir models/Ming-3.0-tts-tiny-mlx-8bit \
+  --text "speaker_1: 你最近是不是又去那家面馆了？\nspeaker_2: 对啊，排了半个小时的队，不过真的值得。" \
+  --out "output_podcast.wav"
+```
+
+**③ 零样本声音克隆 (Zero-Shot Voice Cloning)**：
+```bash
+python3 -m mlx_ming_tts.pipeline \
+  --model-dir models/Ming-3.0-tts-0.5b-mlx-8bit \
+  --ref-audio "path/to/reference.wav" \
+  --prompt-text "参考音频中说话人念出的准确文本内容" \
+  --text "需要克隆该说话人声线来朗读的新文本" \
+  --out "output_cloned.wav"
+```
+
+### 4. Python API 调用
+
+```python
+from mlx_ming_tts.pipeline import MingMLX, save_wav, DEFAULT_TTS_PROMPT
+
+# 加载 MLX 原生模型引擎
+runner = MingMLX("models/Ming-3.0-tts-tiny-mlx-8bit")
+
+# 合成语音
+wav = runner.generate(
+    DEFAULT_TTS_PROMPT,
+    text="欢迎使用纯 MLX 原生移植的 Ming 语音大模型。",
+    ip="灵小萌",
+    sigma=0.15,
+    cfg=2.0,
+    noise_seed=42
+)
+
+# 导出标准 44.1kHz 16-bit PCM WAV
+save_wav(wav, "output.wav", runner.sample_rate)
+```
+
+---
+
+## 🛠️ 项目结构 (Repository Structure)
+
+```text
+mlx-Ming-3.0-tts/
+├── mlx_ming_tts/              # 核心纯 MLX 实现包
+│   ├── models/                # 模型架构
+│   │   ├── lingv3_tts.py      # Tiny 7.9B MoE 顶层调用管线与前缀注入
+│   │   ├── tiny_moe.py        # 128 专家 MoE + KDA 循环注意力与状态缓存
+│   │   ├── bailingmm.py       # 0.5B 稠密 Transformer 架构与调度
+│   │   ├── audio_vae.py       # 纯 MLX AudioVAE 编解码器与 ISTFT 重构头
+│   │   ├── flow.py            # FlowLoss、DiT、Aggregator 与 ODE 求解器
+│   │   └── qwen2.py           # 带有滑动窗口注意力的 Qwen2 语言骨干
+│   ├── ops/                   # 底层算子实现
+│   │   ├── attention.py       # SDPA 与因果滑动窗口掩码
+│   │   ├── norm.py            # RMSNorm 算子
+│   │   └── rope.py            # 旋转位置编码 RoPE
+│   ├── bridge/                # 跨模块桥接
+│   │   ├── istft.py           # 原生快速傅里叶逆变换与重叠相加
+│   │   └── speaker.py         # CampPlus 说话人向量提取桥接
+│   ├── convert.py             # 0.5B 模型转换工具
+│   ├── config.py              # 配置解析与模型规格
+│   └── pipeline.py            # 端到端 CLI 入口与推理调度
+├── demo_page/                 # 试听对比页面前端素材与 JSON 元数据
+│   ├── index.html             # 试听页面
+│   └── unified_same_cases_comparison.json
+├── convert_tiny.py            # Tiny 7.9B 权重合并与 safetensors 转换工具
+├── quantize_tiny.py           # Tiny 8-bit / 4-bit 量化工具
+├── build_unified_html.py      # 离线单文件试听报告编译脚本
+├── standalone_compare.html    # 自包含全场景 6 版本同台离线对比报告 (40MB)
+└── README.md                  # 项目主文档
+```
+
+---
+
+## 📄 开源许可与鸣谢 (License & Acknowledgement)
+
+- 本项目遵循 [Apache-2.0 License](LICENSE) 开源协议。
+- 感谢 [inclusionAI/Ming-3.0-tts](https://github.com/inclusionAI/Ming-3.0-tts) 官方团队开源的高质量 TTS 模型权重与算法设计。
+- 感谢 [Apple MLX](https://github.com/ml-explore/mlx) 团队带来的高性能端侧深度学习框架。
