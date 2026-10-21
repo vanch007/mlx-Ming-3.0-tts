@@ -151,8 +151,7 @@ def save_wav(audio, path, sample_rate=44100):
         wf.writeframes(pcm_bytes)
 
 
-def load_and_resample_prompt(wav_path, target_sr=44100):
-    """Pure MLX / standard wave loader and resampler for reference audio."""
+def load_single_resampled_wav(wav_path, target_sr=44100):
     with wave.open(wav_path, 'rb') as wf:
         sr = wf.getframerate()
         n = wf.getnframes()
@@ -180,8 +179,16 @@ def load_and_resample_prompt(wav_path, target_sr=44100):
         src_right = mx.minimum(src_left + 1, len(raw_arr) - 1)
         src_frac = src_idx - src_left.astype(mx.float32)
         wav_mx = wav_mx[src_left] * (1.0 - src_frac) + wav_mx[src_right] * src_frac
+    return wav_mx[None, :]
 
-    wav_mx = wav_mx[None, :]
+def load_and_resample_prompt(wav_path_or_paths, target_sr=44100):
+    """Pure MLX / standard wave loader and resampler supporting single or multiple reference audios."""
+    if isinstance(wav_path_or_paths, (list, tuple)):
+        parts = [load_single_resampled_wav(p, target_sr) for p in wav_path_or_paths]
+        wav_mx = mx.concatenate(parts, axis=1)
+    else:
+        wav_mx = load_single_resampled_wav(wav_path_or_paths, target_sr)
+
     align = int(1 / 12.5 * 1 * target_sr)
     rem = wav_mx.shape[-1] % align
     if rem:
