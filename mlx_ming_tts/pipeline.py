@@ -29,7 +29,9 @@ from mlx_ming_tts.models.lingv3_tts import LingV3TTS
 DEFAULT_TTS_PROMPT = "Please generate speech based on the following description.\n"
 
 
-def split_text_fragments(text, max_len=30):
+def split_text_fragments(text, max_len=60):
+    if len(text) <= max_len or len(text) <= 50:
+        return [text]
     """Split long text into coherent semantic fragments to prevent AR drift."""
     pattern = r'([。！？.!?\n]+)'
     raw = [s.strip() for s in re.split(pattern, text) if s.strip()]
@@ -258,7 +260,7 @@ class MingMLX:
                 default_ip = "灵小萌" if is_chinese else "US_Emma"
                 instruction = build_ip_instruction(default_ip, is_chinese=is_chinese)
 
-        if split_long_text and (prompt_waveform is None):
+        if split_long_text and (prompt_waveform is None) and len(text) > 60:
             fragments = split_text_fragments(text, max_len=30)
         else:
             fragments = [text]
