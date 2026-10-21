@@ -92,3 +92,13 @@ python3 -m mlx_ming_tts.pipeline \
   --ip "灵小萌" \
   --out "output/sample_4bit.wav"
 ```
+
+### 5. 试听对比页面 (Interactive Demo Page)
+
+项目中已集成基于现代化暗黑主题的交互式试听对比页面，支持在浏览器中同时横向试听 **官方原始 Demo**、**MLX bf16 (全精度)**、**MLX 8-bit (整数量化)** 与 **MLX 4-bit (超轻量化)** 四路音频，并直观对比耗时、RTF 和模型体积：
+
+```bash
+# 启动本地试听服务器
+cd /Users/vanch/mlx-Ming-3.0-tts/demo_page && python3 -m http.server 8080
+```
+打开浏览器访问 [http://localhost:8080](http://localhost:8080) 即可播放试听与评测。

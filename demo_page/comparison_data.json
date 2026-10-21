@@ -1,0 +1,222 @@
+[
+  {
+    "case_id": "01_ip",
+    "category": "内置品质音色 (灵小甄 - 带货主播)",
+    "text": "这款产品的名字，叫变态坑爹牛肉丸。",
+    "official": {
+      "name": "官方原始 Demo",
+      "audio_file": "audio/01_ip_official.wav",
+      "duration_s": 3.52,
+      "samplerate": 44100,
+      "size_kb": 303.2
+    },
+    "mlx_versions": {
+      "bf16": {
+        "name": "MLX bf16 (全精度)",
+        "audio_file": "audio/01_ip_bf16.wav",
+        "weight_size_mb": 3081.6,
+        "load_time_s": 0.17,
+        "elapsed_s": 3.49,
+        "duration_s": 3.1,
+        "rtf": 1.127,
+        "size_kb": 267.1
+      },
+      "int8": {
+        "name": "MLX 8-bit (整数量化)",
+        "audio_file": "audio/01_ip_int8.wav",
+        "weight_size_mb": 1763.1,
+        "load_time_s": 0.25,
+        "elapsed_s": 1.8,
+        "duration_s": 3.0,
+        "rtf": 0.599,
+        "size_kb": 258.4
+      },
+      "int4": {
+        "name": "MLX 4-bit (超轻量化)",
+        "audio_file": "audio/01_ip_int4.wav",
+        "weight_size_mb": 1059.8,
+        "load_time_s": 0.22,
+        "elapsed_s": 1.37,
+        "duration_s": 2.9,
+        "rtf": 0.471,
+        "size_kb": 249.8
+      }
+    }
+  },
+  {
+    "case_id": "02_style",
+    "category": "自然语言音色设计 (女童声急促抗议)",
+    "text": "人家从那走过，他们就说我故意偷听，还说我是小广播，我偏要广播，偏要广播偏。",
+    "official": {
+      "name": "官方原始 Demo",
+      "audio_file": "audio/02_style_official.wav",
+      "duration_s": 6.08,
+      "samplerate": 44100,
+      "size_kb": 523.7
+    },
+    "mlx_versions": {
+      "bf16": {
+        "name": "MLX bf16 (全精度)",
+        "audio_file": "audio/02_style_bf16.wav",
+        "weight_size_mb": 3081.6,
+        "load_time_s": 0.17,
+        "elapsed_s": 5.65,
+        "duration_s": 5.2,
+        "rtf": 1.087,
+        "size_kb": 447.9
+      },
+      "int8": {
+        "name": "MLX 8-bit (整数量化)",
+        "audio_file": "audio/02_style_int8.wav",
+        "weight_size_mb": 1763.1,
+        "load_time_s": 0.25,
+        "elapsed_s": 2.92,
+        "duration_s": 4.7,
+        "rtf": 0.621,
+        "size_kb": 404.9
+      },
+      "int4": {
+        "name": "MLX 4-bit (超轻量化)",
+        "audio_file": "audio/02_style_int4.wav",
+        "weight_size_mb": 1059.8,
+        "load_time_s": 0.22,
+        "elapsed_s": 9.06,
+        "duration_s": 19.4,
+        "rtf": 0.467,
+        "size_kb": 1671.0
+      }
+    }
+  },
+  {
+    "case_id": "03_basic",
+    "category": "基础属性控制 (语速: 慢速导航播音)",
+    "text": "导航开始，全程二十五公里，预计需要十二分钟。",
+    "official": {
+      "name": "官方原始 Demo",
+      "audio_file": "audio/03_basic_official.wav",
+      "duration_s": 4.74,
+      "samplerate": 44100,
+      "size_kb": 413.3
+    },
+    "mlx_versions": {
+      "bf16": {
+        "name": "MLX bf16 (全精度)",
+        "audio_file": "audio/03_basic_bf16.wav",
+        "weight_size_mb": 3081.6,
+        "load_time_s": 0.17,
+        "elapsed_s": 4.26,
+        "duration_s": 3.8,
+        "rtf": 1.12,
+        "size_kb": 327.3
+      },
+      "int8": {
+        "name": "MLX 8-bit (整数量化)",
+        "audio_file": "audio/03_basic_int8.wav",
+        "weight_size_mb": 1763.1,
+        "load_time_s": 0.25,
+        "elapsed_s": 2.07,
+        "duration_s": 3.8,
+        "rtf": 0.544,
+        "size_kb": 327.3
+      },
+      "int4": {
+        "name": "MLX 4-bit (超轻量化)",
+        "audio_file": "audio/03_basic_int4.wav",
+        "weight_size_mb": 1059.8,
+        "load_time_s": 0.22,
+        "elapsed_s": 1.91,
+        "duration_s": 4.08,
+        "rtf": 0.468,
+        "size_kb": 351.5
+      }
+    }
+  },
+  {
+    "case_id": "04_dialect",
+    "category": "方言控制 (广粤话地道俚语)",
+    "text": "佢系头大冇脑脑大生草种",
+    "official": {
+      "name": "官方原始 Demo",
+      "audio_file": "audio/04_dialect_official.wav",
+      "duration_s": 3.84,
+      "samplerate": 44100,
+      "size_kb": 330.8
+    },
+    "mlx_versions": {
+      "bf16": {
+        "name": "MLX bf16 (全精度)",
+        "audio_file": "audio/04_dialect_bf16.wav",
+        "weight_size_mb": 3081.6,
+        "load_time_s": 0.17,
+        "elapsed_s": 3.36,
+        "duration_s": 3.04,
+        "rtf": 1.105,
+        "size_kb": 261.9
+      },
+      "int8": {
+        "name": "MLX 8-bit (整数量化)",
+        "audio_file": "audio/04_dialect_int8.wav",
+        "weight_size_mb": 1763.1,
+        "load_time_s": 0.25,
+        "elapsed_s": 1.5,
+        "duration_s": 3.04,
+        "rtf": 0.492,
+        "size_kb": 261.9
+      },
+      "int4": {
+        "name": "MLX 4-bit (超轻量化)",
+        "audio_file": "audio/04_dialect_int4.wav",
+        "weight_size_mb": 1059.8,
+        "load_time_s": 0.22,
+        "elapsed_s": 1.37,
+        "duration_s": 2.7,
+        "rtf": 0.506,
+        "size_kb": 232.6
+      }
+    }
+  },
+  {
+    "case_id": "05_clone",
+    "category": "零样本声音克隆 (In-Context 跨句克隆)",
+    "text": "请用参考音色自然地说出这句话：测试需要同时关注内容、音色和稳定性。",
+    "official": {
+      "name": "官方原始 Demo",
+      "audio_file": "audio/05_clone_official.wav",
+      "duration_s": 6.46,
+      "samplerate": 24000,
+      "size_kb": 303.0
+    },
+    "mlx_versions": {
+      "bf16": {
+        "name": "MLX bf16 (全精度)",
+        "audio_file": "audio/05_clone_bf16.wav",
+        "weight_size_mb": 3081.6,
+        "load_time_s": 0.17,
+        "elapsed_s": 8.06,
+        "duration_s": 7.1,
+        "rtf": 1.135,
+        "size_kb": 611.6
+      },
+      "int8": {
+        "name": "MLX 8-bit (整数量化)",
+        "audio_file": "audio/05_clone_int8.wav",
+        "weight_size_mb": 1763.1,
+        "load_time_s": 0.25,
+        "elapsed_s": 3.85,
+        "duration_s": 7.1,
+        "rtf": 0.542,
+        "size_kb": 611.6
+      },
+      "int4": {
+        "name": "MLX 4-bit (超轻量化)",
+        "audio_file": "audio/05_clone_int4.wav",
+        "weight_size_mb": 1059.8,
+        "load_time_s": 0.22,
+        "elapsed_s": 3.53,
+        "duration_s": 7.44,
+        "rtf": 0.475,
+        "size_kb": 640.9
+      }
+    }
+  }
+]
