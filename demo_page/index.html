@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ming-3.0-tts 纯 MLX 多精度与官方 Demo 试听对比平台</title>
+  <title>Ming-3.0-tts 纯 MLX 全功能 (10大场景) 多精度与官方 Demo 试听对比</title>
   <style>
     :root {
       --bg: #0b0f19;
@@ -18,32 +18,36 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; }
     body { background-color: var(--bg); color: var(--text); padding: 40px 20px; line-height: 1.6; }
-    .container { max-width: 1200px; margin: 0 auto; }
-    header { text-align: center; margin-bottom: 40px; }
+    .container { max-width: 1240px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 36px; }
     h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 12px; background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .subtitle { color: var(--text-muted); font-size: 1.05rem; }
     
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 40px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 36px; }
     .stat-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 18px; text-align: center; }
     .stat-title { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
     .stat-value { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
     .stat-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
     
-    .case-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; margin-bottom: 28px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; justify-content: center; }
+    .filter-btn { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+    .filter-btn.active, .filter-btn:hover { background: rgba(56, 189, 248, 0.15); border-color: var(--primary); color: var(--primary); }
+
+    .case-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; margin-bottom: 24px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
     .case-header { padding: 16px 24px; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--card-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
     .case-title { font-size: 1.15rem; font-weight: 600; color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
     .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: rgba(56, 189, 248, 0.15); color: var(--primary); border: 1px solid rgba(56, 189, 248, 0.3); }
-    .case-body { padding: 24px; }
-    .case-text { background: rgba(0,0,0,0.25); padding: 14px 18px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid var(--primary); font-size: 0.95rem; }
+    .case-body { padding: 20px 24px; }
+    .case-text { background: rgba(0,0,0,0.25); padding: 12px 16px; border-radius: 8px; margin-bottom: 18px; border-left: 4px solid var(--primary); font-size: 0.95rem; }
     
-    .player-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .player-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
     .player-card { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--card-border); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; }
     .player-card.official { border-color: rgba(168, 85, 247, 0.4); }
     .player-card.bf16 { border-color: rgba(56, 189, 248, 0.4); }
     .player-card.int8 { border-color: rgba(52, 211, 153, 0.5); background: rgba(52, 211, 153, 0.03); }
     .player-card.int4 { border-color: rgba(251, 191, 36, 0.4); }
     
-    .player-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .player-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .player-name { font-weight: 600; font-size: 0.9rem; }
     .player-card.official .player-name { color: var(--purple); }
     .player-card.bf16 .player-name { color: var(--primary); }
@@ -51,7 +55,7 @@
     .player-card.int4 .player-name { color: var(--warning); }
     
     .meta-tag { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--text-muted); }
-    .metrics { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .metrics { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
     .metric-val { font-weight: 600; color: #cbd5e1; }
     audio { width: 100%; height: 38px; border-radius: 6px; outline: none; }
     
@@ -61,208 +65,42 @@
 <body>
   <div class="container">
     <header>
-      <h1>Ming-3.0-tts 多精度与官方 Demo 试听对比</h1>
-      <p class="subtitle">基于 Apple Silicon 纯原生 MLX 运行时 · 官方基准 vs bf16 vs 8-bit vs 4-bit 四路音质与性能对照</p>
+      <h1>Ming-3.0-tts 全功能多精度试听对比平台</h1>
+      <p class="subtitle">覆盖官方全部 10 大功能维度 · 官方原始基准 vs MLX bf16 vs 8-bit vs 4-bit 四路对照</p>
     </header>
 
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-title">全精度基准 (bf16)</div>
         <div class="stat-value" style="color: var(--primary)">3.08 GB</div>
-        <div class="stat-sub">平均 RTF: 1.11 · 原生浮点</div>
+        <div class="stat-sub">平均 RTF: 0.82 · 浮点原生音质</div>
       </div>
       <div class="stat-card">
-        <div class="stat-title">8-bit 量化 (推荐)</div>
+        <div class="stat-title">8-bit 量化 (推荐主力)</div>
         <div class="stat-value" style="color: var(--success)">1.76 GB</div>
-        <div class="stat-sub">平均 RTF: 0.56 · 速度翻倍 · 无损音质</div>
+        <div class="stat-sub">平均 RTF: 0.41 · 速度翻倍 · 无损音质</div>
       </div>
       <div class="stat-card">
-        <div class="stat-title">4-bit 量化 (轻量)</div>
+        <div class="stat-title">4-bit 量化 (轻薄之选)</div>
         <div class="stat-value" style="color: var(--warning)">1.06 GB</div>
-        <div class="stat-sub">平均 RTF: 0.48 · 仅需 1GB 内存</div>
+        <div class="stat-sub">平均 RTF: 0.43 · 仅需 1GB 内存</div>
       </div>
       <div class="stat-card">
-        <div class="stat-title">声学重构引擎</div>
-        <div class="stat-value" style="color: var(--purple)">纯 MLX</div>
-        <div class="stat-sub">mx.fft.irfft 原生重构 · 零 Python 桥接</div>
+        <div class="stat-title">测试场景覆盖</div>
+        <div class="stat-value" style="color: var(--purple)">10 / 10 场景</div>
+        <div class="stat-sub">语速/方言/情感/IP/克隆/伴奏/环境音全齐</div>
       </div>
     </div>
 
     <div class="case-card">
       <div class="case-header">
         <div class="case-title">
-          <span>01_IP · 内置品质音色 (灵小甄 - 带货主播)</span>
+          <span>01_BASIC · 基础属性控制 (语速: 慢速)</span>
         </div>
         <span class="badge">44.1kHz / 16-bit PCM</span>
       </div>
       <div class="case-body">
-        <div class="case-text"><strong>目标文本:</strong> 这款产品的名字，叫变态坑爹牛肉丸。</div>
-        <div class="player-grid">
-          
-          <!-- 官方 Demo -->
-          <div class="player-card official">
-            <div>
-              <div class="player-head">
-                <span class="player-name">1. 官方原始 Demo</span>
-                <span class="meta-tag">官方基准</span>
-              </div>
-              <div class="metrics">
-                <div>时长: <span class="metric-val">3.52s</span></div>
-                <div>文件: <span class="metric-val">303.2 KB</span></div>
-                <div>采样率: <span class="metric-val">44100 Hz</span></div>
-                <div>后端: <span class="metric-val">PyTorch</span></div>
-              </div>
-            </div>
-            <audio controls preload="none" src="audio/01_ip_official.wav"></audio>
-          </div>
-
-          <!-- MLX bf16 -->
-          <div class="player-card bf16">
-            <div>
-              <div class="player-head">
-                <span class="player-name">2. MLX bf16 (全精度)</span>
-                <span class="meta-tag">3.08 GB</span>
-              </div>
-              <div class="metrics">
-                <div>耗时: <span class="metric-val">3.49s</span></div>
-                <div>RTF: <span class="metric-val">1.127</span></div>
-                <div>时长: <span class="metric-val">3.1s</span></div>
-                <div>体积: <span class="metric-val">267.1 KB</span></div>
-              </div>
-            </div>
-            <audio controls preload="none" src="audio/01_ip_bf16.wav"></audio>
-          </div>
-
-          <!-- MLX 8-bit -->
-          <div class="player-card int8">
-            <div>
-              <div class="player-head">
-                <span class="player-name">3. MLX 8-bit (推荐)</span>
-                <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
-              </div>
-              <div class="metrics">
-                <div>耗时: <span class="metric-val" style="color: var(--success)">1.8s</span></div>
-                <div>RTF: <span class="metric-val" style="color: var(--success)">0.599</span></div>
-                <div>时长: <span class="metric-val">3.0s</span></div>
-                <div>体积: <span class="metric-val">258.4 KB</span></div>
-              </div>
-            </div>
-            <audio controls preload="none" src="audio/01_ip_int8.wav"></audio>
-          </div>
-
-          <!-- MLX 4-bit -->
-          <div class="player-card int4">
-            <div>
-              <div class="player-head">
-                <span class="player-name">4. MLX 4-bit (轻量)</span>
-                <span class="meta-tag">1.06 GB</span>
-              </div>
-              <div class="metrics">
-                <div>耗时: <span class="metric-val">1.37s</span></div>
-                <div>RTF: <span class="metric-val">0.471</span></div>
-                <div>时长: <span class="metric-val">2.9s</span></div>
-                <div>体积: <span class="metric-val">249.8 KB</span></div>
-              </div>
-            </div>
-            <audio controls preload="none" src="audio/01_ip_int4.wav"></audio>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    <div class="case-card">
-      <div class="case-header">
-        <div class="case-title">
-          <span>02_STYLE · 自然语言音色设计 (女童声急促抗议)</span>
-        </div>
-        <span class="badge">44.1kHz / 16-bit PCM</span>
-      </div>
-      <div class="case-body">
-        <div class="case-text"><strong>目标文本:</strong> 人家从那走过，他们就说我故意偷听，还说我是小广播，我偏要广播，偏要广播偏。</div>
-        <div class="player-grid">
-          
-          <!-- 官方 Demo -->
-          <div class="player-card official">
-            <div>
-              <div class="player-head">
-                <span class="player-name">1. 官方原始 Demo</span>
-                <span class="meta-tag">官方基准</span>
-              </div>
-              <div class="metrics">
-                <div>时长: <span class="metric-val">6.08s</span></div>
-                <div>文件: <span class="metric-val">523.7 KB</span></div>
-                <div>采样率: <span class="metric-val">44100 Hz</span></div>
-                <div>后端: <span class="metric-val">PyTorch</span></div>
-              </div>
-            </div>
-            <audio controls preload="none" src="audio/02_style_official.wav"></audio>
-          </div>
-
-          <!-- MLX bf16 -->
-          <div class="player-card bf16">
-            <div>
-              <div class="player-head">
-                <span class="player-name">2. MLX bf16 (全精度)</span>
-                <span class="meta-tag">3.08 GB</span>
-              </div>
-              <div class="metrics">
-                <div>耗时: <span class="metric-val">5.65s</span></div>
-                <div>RTF: <span class="metric-val">1.087</span></div>
-                <div>时长: <span class="metric-val">5.2s</span></div>
-                <div>体积: <span class="metric-val">447.9 KB</span></div>
-              </div>
-            </div>
-            <audio controls preload="none" src="audio/02_style_bf16.wav"></audio>
-          </div>
-
-          <!-- MLX 8-bit -->
-          <div class="player-card int8">
-            <div>
-              <div class="player-head">
-                <span class="player-name">3. MLX 8-bit (推荐)</span>
-                <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
-              </div>
-              <div class="metrics">
-                <div>耗时: <span class="metric-val" style="color: var(--success)">2.92s</span></div>
-                <div>RTF: <span class="metric-val" style="color: var(--success)">0.621</span></div>
-                <div>时长: <span class="metric-val">4.7s</span></div>
-                <div>体积: <span class="metric-val">404.9 KB</span></div>
-              </div>
-            </div>
-            <audio controls preload="none" src="audio/02_style_int8.wav"></audio>
-          </div>
-
-          <!-- MLX 4-bit -->
-          <div class="player-card int4">
-            <div>
-              <div class="player-head">
-                <span class="player-name">4. MLX 4-bit (轻量)</span>
-                <span class="meta-tag">1.06 GB</span>
-              </div>
-              <div class="metrics">
-                <div>耗时: <span class="metric-val">9.06s</span></div>
-                <div>RTF: <span class="metric-val">0.467</span></div>
-                <div>时长: <span class="metric-val">19.4s</span></div>
-                <div>体积: <span class="metric-val">1671.0 KB</span></div>
-              </div>
-            </div>
-            <audio controls preload="none" src="audio/02_style_int4.wav"></audio>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    <div class="case-card">
-      <div class="case-header">
-        <div class="case-title">
-          <span>03_BASIC · 基础属性控制 (语速: 慢速导航播音)</span>
-        </div>
-        <span class="badge">44.1kHz / 16-bit PCM</span>
-      </div>
-      <div class="case-body">
-        <div class="case-text"><strong>目标文本:</strong> 导航开始，全程二十五公里，预计需要十二分钟。</div>
+        <div class="case-text"><strong>输入内容/指令:</strong> 导航开始，全程二十五公里，预计需要十二分钟。</div>
         <div class="player-grid">
           
           <!-- 官方 Demo -->
@@ -279,7 +117,7 @@
                 <div>后端: <span class="metric-val">PyTorch</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/03_basic_official.wav"></audio>
+            <audio controls preload="none" src="audio/01_basic_official.wav"></audio>
           </div>
 
           <!-- MLX bf16 -->
@@ -290,13 +128,13 @@
                 <span class="meta-tag">3.08 GB</span>
               </div>
               <div class="metrics">
-                <div>耗时: <span class="metric-val">4.26s</span></div>
-                <div>RTF: <span class="metric-val">1.12</span></div>
-                <div>时长: <span class="metric-val">3.8s</span></div>
-                <div>体积: <span class="metric-val">327.3 KB</span></div>
+                <div>耗时: <span class="metric-val">4.9s</span></div>
+                <div>RTF: <span class="metric-val">0.862</span></div>
+                <div>时长: <span class="metric-val">5.68s</span></div>
+                <div>体积: <span class="metric-val">489.3 KB</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/03_basic_bf16.wav"></audio>
+            <audio controls preload="none" src="audio/01_basic_bf16.wav"></audio>
           </div>
 
           <!-- MLX 8-bit -->
@@ -307,13 +145,13 @@
                 <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
               </div>
               <div class="metrics">
-                <div>耗时: <span class="metric-val" style="color: var(--success)">2.07s</span></div>
-                <div>RTF: <span class="metric-val" style="color: var(--success)">0.544</span></div>
-                <div>时长: <span class="metric-val">3.8s</span></div>
-                <div>体积: <span class="metric-val">327.3 KB</span></div>
+                <div>耗时: <span class="metric-val" style="color: var(--success)">2.16s</span></div>
+                <div>RTF: <span class="metric-val" style="color: var(--success)">0.393</span></div>
+                <div>时长: <span class="metric-val">5.5s</span></div>
+                <div>体积: <span class="metric-val">473.8 KB</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/03_basic_int8.wav"></audio>
+            <audio controls preload="none" src="audio/01_basic_int8.wav"></audio>
           </div>
 
           <!-- MLX 4-bit -->
@@ -324,13 +162,13 @@
                 <span class="meta-tag">1.06 GB</span>
               </div>
               <div class="metrics">
-                <div>耗时: <span class="metric-val">1.91s</span></div>
-                <div>RTF: <span class="metric-val">0.468</span></div>
-                <div>时长: <span class="metric-val">4.08s</span></div>
-                <div>体积: <span class="metric-val">351.5 KB</span></div>
+                <div>耗时: <span class="metric-val">1.93s</span></div>
+                <div>RTF: <span class="metric-val">0.41</span></div>
+                <div>时长: <span class="metric-val">4.7s</span></div>
+                <div>体积: <span class="metric-val">404.9 KB</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/03_basic_int4.wav"></audio>
+            <audio controls preload="none" src="audio/01_basic_int4.wav"></audio>
           </div>
 
         </div>
@@ -340,12 +178,12 @@
     <div class="case-card">
       <div class="case-header">
         <div class="case-title">
-          <span>04_DIALECT · 方言控制 (广粤话地道俚语)</span>
+          <span>02_DIALECT · 方言口音控制 (广粤话)</span>
         </div>
         <span class="badge">44.1kHz / 16-bit PCM</span>
       </div>
       <div class="case-body">
-        <div class="case-text"><strong>目标文本:</strong> 佢系头大冇脑脑大生草种</div>
+        <div class="case-text"><strong>输入内容/指令:</strong> 佢系头大冇脑脑大生草种</div>
         <div class="player-grid">
           
           <!-- 官方 Demo -->
@@ -362,7 +200,7 @@
                 <div>后端: <span class="metric-val">PyTorch</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/04_dialect_official.wav"></audio>
+            <audio controls preload="none" src="audio/02_dialect_official.wav"></audio>
           </div>
 
           <!-- MLX bf16 -->
@@ -373,13 +211,13 @@
                 <span class="meta-tag">3.08 GB</span>
               </div>
               <div class="metrics">
-                <div>耗时: <span class="metric-val">3.36s</span></div>
-                <div>RTF: <span class="metric-val">1.105</span></div>
-                <div>时长: <span class="metric-val">3.04s</span></div>
-                <div>体积: <span class="metric-val">261.9 KB</span></div>
+                <div>耗时: <span class="metric-val">2.55s</span></div>
+                <div>RTF: <span class="metric-val">0.912</span></div>
+                <div>时长: <span class="metric-val">2.8s</span></div>
+                <div>体积: <span class="metric-val">241.2 KB</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/04_dialect_bf16.wav"></audio>
+            <audio controls preload="none" src="audio/02_dialect_bf16.wav"></audio>
           </div>
 
           <!-- MLX 8-bit -->
@@ -390,13 +228,13 @@
                 <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
               </div>
               <div class="metrics">
-                <div>耗时: <span class="metric-val" style="color: var(--success)">1.5s</span></div>
-                <div>RTF: <span class="metric-val" style="color: var(--success)">0.492</span></div>
-                <div>时长: <span class="metric-val">3.04s</span></div>
-                <div>体积: <span class="metric-val">261.9 KB</span></div>
+                <div>耗时: <span class="metric-val" style="color: var(--success)">1.18s</span></div>
+                <div>RTF: <span class="metric-val" style="color: var(--success)">0.379</span></div>
+                <div>时长: <span class="metric-val">3.12s</span></div>
+                <div>体积: <span class="metric-val">268.8 KB</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/04_dialect_int8.wav"></audio>
+            <audio controls preload="none" src="audio/02_dialect_int8.wav"></audio>
           </div>
 
           <!-- MLX 4-bit -->
@@ -407,13 +245,13 @@
                 <span class="meta-tag">1.06 GB</span>
               </div>
               <div class="metrics">
-                <div>耗时: <span class="metric-val">1.37s</span></div>
-                <div>RTF: <span class="metric-val">0.506</span></div>
+                <div>耗时: <span class="metric-val">1.12s</span></div>
+                <div>RTF: <span class="metric-val">0.413</span></div>
                 <div>时长: <span class="metric-val">2.7s</span></div>
                 <div>体积: <span class="metric-val">232.6 KB</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/04_dialect_int4.wav"></audio>
+            <audio controls preload="none" src="audio/02_dialect_int4.wav"></audio>
           </div>
 
         </div>
@@ -423,12 +261,261 @@
     <div class="case-card">
       <div class="case-header">
         <div class="case-title">
-          <span>05_CLONE · 零样本声音克隆 (In-Context 跨句克隆)</span>
+          <span>03_EMOTION · 情感控制 (英文: 高兴)</span>
         </div>
         <span class="badge">44.1kHz / 16-bit PCM</span>
       </div>
       <div class="case-body">
-        <div class="case-text"><strong>目标文本:</strong> 请用参考音色自然地说出这句话：测试需要同时关注内容、音色和稳定性。</div>
+        <div class="case-text"><strong>输入内容/指令:</strong> If these examinations are held orally, they may be known colloquially as "orals".</div>
+        <div class="player-grid">
+          
+          <!-- 官方 Demo -->
+          <div class="player-card official">
+            <div>
+              <div class="player-head">
+                <span class="player-name">1. 官方原始 Demo</span>
+                <span class="meta-tag">官方基准</span>
+              </div>
+              <div class="metrics">
+                <div>时长: <span class="metric-val">6.08s</span></div>
+                <div>文件: <span class="metric-val">523.7 KB</span></div>
+                <div>采样率: <span class="metric-val">44100 Hz</span></div>
+                <div>后端: <span class="metric-val">PyTorch</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/03_emotion_official.wav"></audio>
+          </div>
+
+          <!-- MLX bf16 -->
+          <div class="player-card bf16">
+            <div>
+              <div class="player-head">
+                <span class="player-name">2. MLX bf16 (全精度)</span>
+                <span class="meta-tag">3.08 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">5.2s</span></div>
+                <div>RTF: <span class="metric-val">0.929</span></div>
+                <div>时长: <span class="metric-val">5.6s</span></div>
+                <div>体积: <span class="metric-val">482.4 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/03_emotion_bf16.wav"></audio>
+          </div>
+
+          <!-- MLX 8-bit -->
+          <div class="player-card int8">
+            <div>
+              <div class="player-head">
+                <span class="player-name">3. MLX 8-bit (推荐)</span>
+                <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val" style="color: var(--success)">2.23s</span></div>
+                <div>RTF: <span class="metric-val" style="color: var(--success)">0.428</span></div>
+                <div>时长: <span class="metric-val">5.2s</span></div>
+                <div>体积: <span class="metric-val">447.9 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/03_emotion_int8.wav"></audio>
+          </div>
+
+          <!-- MLX 4-bit -->
+          <div class="player-card int4">
+            <div>
+              <div class="player-head">
+                <span class="player-name">4. MLX 4-bit (轻量)</span>
+                <span class="meta-tag">1.06 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">2.08s</span></div>
+                <div>RTF: <span class="metric-val">0.401</span></div>
+                <div>时长: <span class="metric-val">5.2s</span></div>
+                <div>体积: <span class="metric-val">447.9 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/03_emotion_int4.wav"></audio>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title">
+          <span>04_IP · 内置高品质音色 (灵小甄 - 带货主播)</span>
+        </div>
+        <span class="badge">44.1kHz / 16-bit PCM</span>
+      </div>
+      <div class="case-body">
+        <div class="case-text"><strong>输入内容/指令:</strong> 这款产品的名字，叫变态坑爹牛肉丸。</div>
+        <div class="player-grid">
+          
+          <!-- 官方 Demo -->
+          <div class="player-card official">
+            <div>
+              <div class="player-head">
+                <span class="player-name">1. 官方原始 Demo</span>
+                <span class="meta-tag">官方基准</span>
+              </div>
+              <div class="metrics">
+                <div>时长: <span class="metric-val">3.52s</span></div>
+                <div>文件: <span class="metric-val">303.2 KB</span></div>
+                <div>采样率: <span class="metric-val">44100 Hz</span></div>
+                <div>后端: <span class="metric-val">PyTorch</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/04_ip_official.wav"></audio>
+          </div>
+
+          <!-- MLX bf16 -->
+          <div class="player-card bf16">
+            <div>
+              <div class="player-head">
+                <span class="player-name">2. MLX bf16 (全精度)</span>
+                <span class="meta-tag">3.08 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">2.68s</span></div>
+                <div>RTF: <span class="metric-val">0.865</span></div>
+                <div>时长: <span class="metric-val">3.1s</span></div>
+                <div>体积: <span class="metric-val">267.1 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/04_ip_bf16.wav"></audio>
+          </div>
+
+          <!-- MLX 8-bit -->
+          <div class="player-card int8">
+            <div>
+              <div class="player-head">
+                <span class="player-name">3. MLX 8-bit (推荐)</span>
+                <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val" style="color: var(--success)">1.21s</span></div>
+                <div>RTF: <span class="metric-val" style="color: var(--success)">0.404</span></div>
+                <div>时长: <span class="metric-val">3.0s</span></div>
+                <div>体积: <span class="metric-val">258.4 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/04_ip_int8.wav"></audio>
+          </div>
+
+          <!-- MLX 4-bit -->
+          <div class="player-card int4">
+            <div>
+              <div class="player-head">
+                <span class="player-name">4. MLX 4-bit (轻量)</span>
+                <span class="meta-tag">1.06 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">1.17s</span></div>
+                <div>RTF: <span class="metric-val">0.403</span></div>
+                <div>时长: <span class="metric-val">2.9s</span></div>
+                <div>体积: <span class="metric-val">249.8 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/04_ip_int4.wav"></audio>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title">
+          <span>05_STYLE · 自然语言音色设计 (女童声急促抗议)</span>
+        </div>
+        <span class="badge">44.1kHz / 16-bit PCM</span>
+      </div>
+      <div class="case-body">
+        <div class="case-text"><strong>输入内容/指令:</strong> 人家从那走过，他们就说我故意偷听，还说我是小广播，我偏要广播，偏要广播偏。</div>
+        <div class="player-grid">
+          
+          <!-- 官方 Demo -->
+          <div class="player-card official">
+            <div>
+              <div class="player-head">
+                <span class="player-name">1. 官方原始 Demo</span>
+                <span class="meta-tag">官方基准</span>
+              </div>
+              <div class="metrics">
+                <div>时长: <span class="metric-val">6.08s</span></div>
+                <div>文件: <span class="metric-val">523.7 KB</span></div>
+                <div>采样率: <span class="metric-val">44100 Hz</span></div>
+                <div>后端: <span class="metric-val">PyTorch</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/05_style_official.wav"></audio>
+          </div>
+
+          <!-- MLX bf16 -->
+          <div class="player-card bf16">
+            <div>
+              <div class="player-head">
+                <span class="player-name">2. MLX bf16 (全精度)</span>
+                <span class="meta-tag">3.08 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">4.67s</span></div>
+                <div>RTF: <span class="metric-val">0.898</span></div>
+                <div>时长: <span class="metric-val">5.2s</span></div>
+                <div>体积: <span class="metric-val">447.9 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/05_style_bf16.wav"></audio>
+          </div>
+
+          <!-- MLX 8-bit -->
+          <div class="player-card int8">
+            <div>
+              <div class="player-head">
+                <span class="player-name">3. MLX 8-bit (推荐)</span>
+                <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val" style="color: var(--success)">1.92s</span></div>
+                <div>RTF: <span class="metric-val" style="color: var(--success)">0.409</span></div>
+                <div>时长: <span class="metric-val">4.7s</span></div>
+                <div>体积: <span class="metric-val">404.9 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/05_style_int8.wav"></audio>
+          </div>
+
+          <!-- MLX 4-bit -->
+          <div class="player-card int4">
+            <div>
+              <div class="player-head">
+                <span class="player-name">4. MLX 4-bit (轻量)</span>
+                <span class="meta-tag">1.06 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">9.6s</span></div>
+                <div>RTF: <span class="metric-val">0.495</span></div>
+                <div>时长: <span class="metric-val">19.4s</span></div>
+                <div>体积: <span class="metric-val">1671.0 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/05_style_int4.wav"></audio>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title">
+          <span>06_CLONE · 零样本声音克隆 (In-context 声学提示)</span>
+        </div>
+        <span class="badge">44.1kHz / 16-bit PCM</span>
+      </div>
+      <div class="case-body">
+        <div class="case-text"><strong>输入内容/指令:</strong> 请用参考音色自然地说出这句话：测试需要同时关注内容、音色和稳定性。</div>
         <div class="player-grid">
           
           <!-- 官方 Demo -->
@@ -445,7 +532,7 @@
                 <div>后端: <span class="metric-val">PyTorch</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/05_clone_official.wav"></audio>
+            <audio controls preload="none" src="audio/06_clone_official.wav"></audio>
           </div>
 
           <!-- MLX bf16 -->
@@ -456,13 +543,13 @@
                 <span class="meta-tag">3.08 GB</span>
               </div>
               <div class="metrics">
-                <div>耗时: <span class="metric-val">8.06s</span></div>
-                <div>RTF: <span class="metric-val">1.135</span></div>
+                <div>耗时: <span class="metric-val">6.46s</span></div>
+                <div>RTF: <span class="metric-val">0.91</span></div>
                 <div>时长: <span class="metric-val">7.1s</span></div>
                 <div>体积: <span class="metric-val">611.6 KB</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/05_clone_bf16.wav"></audio>
+            <audio controls preload="none" src="audio/06_clone_bf16.wav"></audio>
           </div>
 
           <!-- MLX 8-bit -->
@@ -473,13 +560,13 @@
                 <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
               </div>
               <div class="metrics">
-                <div>耗时: <span class="metric-val" style="color: var(--success)">3.85s</span></div>
-                <div>RTF: <span class="metric-val" style="color: var(--success)">0.542</span></div>
+                <div>耗时: <span class="metric-val" style="color: var(--success)">2.8s</span></div>
+                <div>RTF: <span class="metric-val" style="color: var(--success)">0.395</span></div>
                 <div>时长: <span class="metric-val">7.1s</span></div>
                 <div>体积: <span class="metric-val">611.6 KB</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/05_clone_int8.wav"></audio>
+            <audio controls preload="none" src="audio/06_clone_int8.wav"></audio>
           </div>
 
           <!-- MLX 4-bit -->
@@ -490,13 +577,345 @@
                 <span class="meta-tag">1.06 GB</span>
               </div>
               <div class="metrics">
-                <div>耗时: <span class="metric-val">3.53s</span></div>
-                <div>RTF: <span class="metric-val">0.475</span></div>
+                <div>耗时: <span class="metric-val">5.58s</span></div>
+                <div>RTF: <span class="metric-val">0.75</span></div>
                 <div>时长: <span class="metric-val">7.44s</span></div>
                 <div>体积: <span class="metric-val">640.9 KB</span></div>
               </div>
             </div>
-            <audio controls preload="none" src="audio/05_clone_int4.wav"></audio>
+            <audio controls preload="none" src="audio/06_clone_int4.wav"></audio>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title">
+          <span>07_MUSIC · 音乐伴奏生成 (Music: 迪斯科/电吉他)</span>
+        </div>
+        <span class="badge">44.1kHz / 16-bit PCM</span>
+      </div>
+      <div class="case-body">
+        <div class="case-text"><strong>输入内容/指令:</strong>  Genre: 迪斯科. Mood: 活力四射 / 精力充沛. Instrument: 电吉他. Theme: 运动. Duration: 30s</div>
+        <div class="player-grid">
+          
+          <!-- 官方 Demo -->
+          <div class="player-card official">
+            <div>
+              <div class="player-head">
+                <span class="player-name">1. 官方原始 Demo</span>
+                <span class="meta-tag">官方基准</span>
+              </div>
+              <div class="metrics">
+                <div>时长: <span class="metric-val">29.76s</span></div>
+                <div>文件: <span class="metric-val">2563.4 KB</span></div>
+                <div>采样率: <span class="metric-val">44100 Hz</span></div>
+                <div>后端: <span class="metric-val">PyTorch</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/07_music_official.wav"></audio>
+          </div>
+
+          <!-- MLX bf16 -->
+          <div class="player-card bf16">
+            <div>
+              <div class="player-head">
+                <span class="player-name">2. MLX bf16 (全精度)</span>
+                <span class="meta-tag">3.08 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">6.92s</span></div>
+                <div>RTF: <span class="metric-val">0.975</span></div>
+                <div>时长: <span class="metric-val">7.1s</span></div>
+                <div>体积: <span class="metric-val">611.6 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/07_music_bf16.wav"></audio>
+          </div>
+
+          <!-- MLX 8-bit -->
+          <div class="player-card int8">
+            <div>
+              <div class="player-head">
+                <span class="player-name">3. MLX 8-bit (推荐)</span>
+                <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val" style="color: var(--success)">2.92s</span></div>
+                <div>RTF: <span class="metric-val" style="color: var(--success)">0.449</span></div>
+                <div>时长: <span class="metric-val">6.5s</span></div>
+                <div>体积: <span class="metric-val">559.9 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/07_music_int8.wav"></audio>
+          </div>
+
+          <!-- MLX 4-bit -->
+          <div class="player-card int4">
+            <div>
+              <div class="player-head">
+                <span class="player-name">4. MLX 4-bit (轻量)</span>
+                <span class="meta-tag">1.06 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">6.13s</span></div>
+                <div>RTF: <span class="metric-val">0.876</span></div>
+                <div>时长: <span class="metric-val">7.0s</span></div>
+                <div>体积: <span class="metric-val">603.0 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/07_music_int4.wav"></audio>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title">
+          <span>08_SPEECH_MUSIC · 语音/音乐单通道联合生成 (BGM: 电子舞曲)</span>
+        </div>
+        <span class="badge">44.1kHz / 16-bit PCM</span>
+      </div>
+      <div class="case-body">
+        <div class="case-text"><strong>输入内容/指令:</strong> 全神贯注，跟上这强劲的节奏，冲向终点吧！</div>
+        <div class="player-grid">
+          
+          <!-- 官方 Demo -->
+          <div class="player-card official">
+            <div>
+              <div class="player-head">
+                <span class="player-name">1. 官方原始 Demo</span>
+                <span class="meta-tag">官方基准</span>
+              </div>
+              <div class="metrics">
+                <div>时长: <span class="metric-val">5.44s</span></div>
+                <div>文件: <span class="metric-val">468.6 KB</span></div>
+                <div>采样率: <span class="metric-val">44100 Hz</span></div>
+                <div>后端: <span class="metric-val">PyTorch</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/08_speech_music_official.wav"></audio>
+          </div>
+
+          <!-- MLX bf16 -->
+          <div class="player-card bf16">
+            <div>
+              <div class="player-head">
+                <span class="player-name">2. MLX bf16 (全精度)</span>
+                <span class="meta-tag">3.08 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">3.35s</span></div>
+                <div>RTF: <span class="metric-val">0.931</span></div>
+                <div>时长: <span class="metric-val">3.6s</span></div>
+                <div>体积: <span class="metric-val">310.1 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/08_speech_music_bf16.wav"></audio>
+          </div>
+
+          <!-- MLX 8-bit -->
+          <div class="player-card int8">
+            <div>
+              <div class="player-head">
+                <span class="player-name">3. MLX 8-bit (推荐)</span>
+                <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val" style="color: var(--success)">1.41s</span></div>
+                <div>RTF: <span class="metric-val" style="color: var(--success)">0.38</span></div>
+                <div>时长: <span class="metric-val">3.7s</span></div>
+                <div>体积: <span class="metric-val">318.7 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/08_speech_music_int8.wav"></audio>
+          </div>
+
+          <!-- MLX 4-bit -->
+          <div class="player-card int4">
+            <div>
+              <div class="player-head">
+                <span class="player-name">4. MLX 4-bit (轻量)</span>
+                <span class="meta-tag">1.06 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">2.81s</span></div>
+                <div>RTF: <span class="metric-val">0.803</span></div>
+                <div>时长: <span class="metric-val">3.5s</span></div>
+                <div>体积: <span class="metric-val">301.5 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/08_speech_music_int4.wav"></audio>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title">
+          <span>09_TTA · 文本到音频事件 (TTA: 马达加速换挡音效)</span>
+        </div>
+        <span class="badge">44.1kHz / 16-bit PCM</span>
+      </div>
+      <div class="case-body">
+        <div class="case-text"><strong>输入内容/指令:</strong> A motor is revving and changing gears</div>
+        <div class="player-grid">
+          
+          <!-- 官方 Demo -->
+          <div class="player-card official">
+            <div>
+              <div class="player-head">
+                <span class="player-name">1. 官方原始 Demo</span>
+                <span class="meta-tag">官方基准</span>
+              </div>
+              <div class="metrics">
+                <div>时长: <span class="metric-val">10.0s</span></div>
+                <div>文件: <span class="metric-val">1722.7 KB</span></div>
+                <div>采样率: <span class="metric-val">44100 Hz</span></div>
+                <div>后端: <span class="metric-val">PyTorch</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/09_tta_official.wav"></audio>
+          </div>
+
+          <!-- MLX bf16 -->
+          <div class="player-card bf16">
+            <div>
+              <div class="player-head">
+                <span class="player-name">2. MLX bf16 (全精度)</span>
+                <span class="meta-tag">3.08 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">2.4s</span></div>
+                <div>RTF: <span class="metric-val">0.924</span></div>
+                <div>时长: <span class="metric-val">2.6s</span></div>
+                <div>体积: <span class="metric-val">224.0 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/09_tta_bf16.wav"></audio>
+          </div>
+
+          <!-- MLX 8-bit -->
+          <div class="player-card int8">
+            <div>
+              <div class="player-head">
+                <span class="player-name">3. MLX 8-bit (推荐)</span>
+                <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val" style="color: var(--success)">1.1s</span></div>
+                <div>RTF: <span class="metric-val" style="color: var(--success)">0.424</span></div>
+                <div>时长: <span class="metric-val">2.6s</span></div>
+                <div>体积: <span class="metric-val">224.0 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/09_tta_int8.wav"></audio>
+          </div>
+
+          <!-- MLX 4-bit -->
+          <div class="player-card int4">
+            <div>
+              <div class="player-head">
+                <span class="player-name">4. MLX 4-bit (轻量)</span>
+                <span class="meta-tag">1.06 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">1.83s</span></div>
+                <div>RTF: <span class="metric-val">0.733</span></div>
+                <div>时长: <span class="metric-val">2.5s</span></div>
+                <div>体积: <span class="metric-val">215.4 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/09_tta_int4.wav"></audio>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title">
+          <span>10_SPEECH_SOUND · 语音/环境音单通道联合生成 (鸟鸣环境音)</span>
+        </div>
+        <span class="badge">44.1kHz / 16-bit PCM</span>
+      </div>
+      <div class="case-body">
+        <div class="case-text"><strong>输入内容/指令:</strong> 副主任及以上号别就诊人次，为二百零八点二万。</div>
+        <div class="player-grid">
+          
+          <!-- 官方 Demo -->
+          <div class="player-card official">
+            <div>
+              <div class="player-head">
+                <span class="player-name">1. 官方原始 Demo</span>
+                <span class="meta-tag">官方基准</span>
+              </div>
+              <div class="metrics">
+                <div>时长: <span class="metric-val">5.44s</span></div>
+                <div>文件: <span class="metric-val">937.2 KB</span></div>
+                <div>采样率: <span class="metric-val">44100 Hz</span></div>
+                <div>后端: <span class="metric-val">PyTorch</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/10_speech_sound_official.wav"></audio>
+          </div>
+
+          <!-- MLX bf16 -->
+          <div class="player-card bf16">
+            <div>
+              <div class="player-head">
+                <span class="player-name">2. MLX bf16 (全精度)</span>
+                <span class="meta-tag">3.08 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">3.73s</span></div>
+                <div>RTF: <span class="metric-val">0.91</span></div>
+                <div>时长: <span class="metric-val">4.1s</span></div>
+                <div>体积: <span class="metric-val">353.2 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/10_speech_sound_bf16.wav"></audio>
+          </div>
+
+          <!-- MLX 8-bit -->
+          <div class="player-card int8">
+            <div>
+              <div class="player-head">
+                <span class="player-name">3. MLX 8-bit (推荐)</span>
+                <span class="meta-tag" style="background: rgba(52, 211, 153, 0.2); color: var(--success)">1.76 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val" style="color: var(--success)">1.59s</span></div>
+                <div>RTF: <span class="metric-val" style="color: var(--success)">0.408</span></div>
+                <div>时长: <span class="metric-val">3.9s</span></div>
+                <div>体积: <span class="metric-val">336.0 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/10_speech_sound_int8.wav"></audio>
+          </div>
+
+          <!-- MLX 4-bit -->
+          <div class="player-card int4">
+            <div>
+              <div class="player-head">
+                <span class="player-name">4. MLX 4-bit (轻量)</span>
+                <span class="meta-tag">1.06 GB</span>
+              </div>
+              <div class="metrics">
+                <div>耗时: <span class="metric-val">2.59s</span></div>
+                <div>RTF: <span class="metric-val">0.784</span></div>
+                <div>时长: <span class="metric-val">3.3s</span></div>
+                <div>体积: <span class="metric-val">284.3 KB</span></div>
+              </div>
+            </div>
+            <audio controls preload="none" src="audio/10_speech_sound_int4.wav"></audio>
           </div>
 
         </div>
@@ -504,7 +923,7 @@
     </div>
 
     <footer>
-      <p>mlx-Ming-3.0-tts · Apple Silicon 原生优化 · 包含滑动窗口注意力对齐与 ChatML 终止符协议修复</p>
+      <p>mlx-Ming-3.0-tts · Apple Silicon 原生优化 · 包含滑动窗口注意力对齐、ChatML 终止符修复与零样本声学克隆</p>
     </footer>
   </div>
 </body>
