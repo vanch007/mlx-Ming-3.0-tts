@@ -102,3 +102,20 @@ python3 -m mlx_ming_tts.pipeline \
 cd /Users/vanch/mlx-Ming-3.0-tts/demo_page && python3 -m http.server 8765 --bind 0.0.0.0 --directory demo_page
 ```
 打开浏览器访问 [http://127.0.0.1:8765/index.html](http://127.0.0.1:8765/index.html) 即可播放试听与评测。
+
+
+## 📦 Hugging Face 开源模型发布 (Hugging Face Hub)
+
+三个精度的 MLX 模型已全部发布至 Hugging Face，并在模型页面附带了实测生成的测试音频，支持直接通过 `huggingface-cli` 一键拉取：
+
+| 模型仓库 | 精度与量化 | 权重体积 | 推荐场景 | 在线地址 |
+| :--- | :--- | :--- | :--- | :--- |
+| **[vanch007/Ming-3.0-tts-0.5b-mlx-bf16](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-bf16)** | BFloat16 (全精度) | 3.08 GB | 原生高保真基准对照 | [HF 仓库页面](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-bf16) |
+| **[vanch007/Ming-3.0-tts-0.5b-mlx-8bit](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-8bit)** | **8-bit (整数量化)** | **1.76 GB** | **主力推荐：速度提升 2.1 倍，品质无损** | [HF 仓库页面](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-8bit) |
+| **[vanch007/Ming-3.0-tts-0.5b-mlx-4bit](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-4bit)** | 4-bit (超轻量) | 1.06 GB | 超轻显存（仅 1GB）设备部署 | [HF 仓库页面](https://huggingface.co/vanch007/Ming-3.0-tts-0.5b-mlx-4bit) |
+
+直接通过 CLI 一键下载任意版本：
+```bash
+# 下载 8-bit 主力推荐版
+huggingface-cli download vanch007/Ming-3.0-tts-0.5b-mlx-8bit --local-dir models/Ming-3.0-tts-0.5b-mlx-8bit
+```
