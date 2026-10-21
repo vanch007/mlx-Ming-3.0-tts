@@ -99,6 +99,6 @@ python3 -m mlx_ming_tts.pipeline \
 
 ```bash
 # 启动本地试听服务器
-cd /Users/vanch/mlx-Ming-3.0-tts/demo_page && python3 -m http.server 8080
+cd /Users/vanch/mlx-Ming-3.0-tts/demo_page && python3 -m http.server 8765 --bind 0.0.0.0 --directory demo_page
 ```
-打开浏览器访问 [http://localhost:8080](http://localhost:8080) 即可播放试听与评测。
+打开浏览器访问 [http://127.0.0.1:8765/index.html](http://127.0.0.1:8765/index.html) 即可播放试听与评测。
