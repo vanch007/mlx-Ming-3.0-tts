@@ -250,20 +250,21 @@ class MingMLX:
         is_chinese = bool(re.search(r'[一-龥]', text))
         prompt_waveform = None
 
-        spk_emb = kwargs.get('spk_emb')
+        spk_emb = kwargs.pop('spk_emb', None)
         if ref_audio is not None:
+            # 官方统一声学克隆规范：只要提供了参考音频，必须提取 192 维 CampPlus 向量锁定说话人音色！
+            if spk_emb is None:
+                onnx_path = os.path.join(self.model_dir, "campplus.onnx")
+                if os.path.exists(onnx_path):
+                    embedder = SpeakerEmbedder(onnx_path)
+                    # 支持单音频或多音频
+                    first_ref = ref_audio[0] if isinstance(ref_audio, (list, tuple)) else ref_audio
+                    w, _ = sf.read(first_ref)
+                    spk_emb = embedder(torch.from_numpy(w).float().unsqueeze(0))
             if prompt_text is not None:
                 prompt_waveform = load_and_resample_prompt(ref_audio, self.sample_rate)
                 if instruction is None and style is not None:
                     instruction = build_voice_design_instruction(style, is_chinese=is_chinese)
-            else:
-                # 官方规范 speaker_only 模式 (Basic / Emotion / Dialect)
-                if spk_emb is None:
-                    onnx_path = os.path.join(self.model_dir, "campplus.onnx")
-                    if os.path.exists(onnx_path):
-                        embedder = SpeakerEmbedder(onnx_path)
-                        w, _ = sf.read(ref_audio)
-                        spk_emb = embedder(torch.from_numpy(w).float().unsqueeze(0))
         elif instruction is None:
             if ip is not None:
                 instruction = build_ip_instruction(ip, is_chinese=is_chinese)
