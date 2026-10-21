@@ -1,7 +1,4 @@
-import sys
-sys.path.insert(0, '/Users/vanch/Ming-3.0-tts')
-from ming_tiny.prompt_contract import build_tts_prompt_ids, build_multispeaker_tts_prompt_ids
-from ming_tiny.task_protocol import canonicalize_podcast_script, build_podcast_prompt_transcript
+from .prompt_contract import build_tts_prompt_ids
 """LingV3 TTS (Ming-3.0-tts-tiny) MLX end-to-end model.
 
 Wraps BailingMoeV3ForCausalLM + AudioVAE + FlowLoss (depth=16) + Aggregator.
@@ -128,11 +125,8 @@ class LingV3TTS(nn.Module):
                 tok,
                 text,
                 self.tts_cfg,
-                instruction=instruction,
                 prompt_text=prompt_text,
                 prompt_latent_tokens=prompt_latent_tokens,
-                speaker_slot=True,
-                target_language=target_language,
             )
             input_ids = prompt_ids
             inputs_embeds = self.token_embeddings(mx.array([input_ids]))
