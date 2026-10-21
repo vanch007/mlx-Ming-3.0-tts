@@ -122,8 +122,7 @@ class LingV3TTS(nn.Module):
             input_ids = prompt_ids
             inputs_embeds = self.token_embeddings(mx.array([input_ids]))
             for i, pos in enumerate(speaker_positions):
-                se_proj = self.spk_head(mx.zeros((1, 192), dtype=self.spk_head.weight.dtype))
-                inputs_embeds[0, pos] = se_proj[0]
+                inputs_embeds[0, pos] = 0.0
         else:
             prompt_ids, speaker_pos = build_tts_prompt_ids(
                 tok,
@@ -140,9 +139,11 @@ class LingV3TTS(nn.Module):
             if speaker_pos is not None:
                 if spk_emb is not None:
                     se_proj = self.spk_head(spk_emb[0])
+                    inputs_embeds[0, speaker_pos] = se_proj[0]
                 else:
-                    se_proj = self.spk_head(mx.zeros((1, 192), dtype=self.spk_head.weight.dtype))
-                inputs_embeds[0, speaker_pos] = se_proj[0]
+                    # 官方标准规范：Voice Design / IP / 无参考音频时，必须直接将 speaker position 槽位置为 0
+                    # 严禁将全0传给带 bias 的 spk_head，否则注入的 bias 向量会严重污染声学自回归导致音色断崖漂移
+                    inputs_embeds[0, speaker_pos] = 0.0
 
         # Inject prompt acoustic latents
         if p_hidden is not None:
