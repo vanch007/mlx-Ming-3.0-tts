@@ -308,11 +308,9 @@ class BailingMoeGate(nn.Module):
 
         group_idx = mx.argpartition(-group_scores, kth=self.topk_group - 1, axis=-1)[:, :self.topk_group]
 
-        mask = mx.zeros((N, self.num_experts), dtype=mx.bool_)
-        for n in range(N):
-            for g_id in group_idx[n].tolist():
-                start = g_id * group_size
-                mask[n, start : start + group_size] = True
+        # Vectorized group mask (was a per-token Python loop).
+        group_hit = mx.any(mx.arange(self.n_group)[None, None, :] == group_idx[:, :, None], axis=1)  # (N, n_group)
+        mask = mx.repeat(group_hit[:, :, None], group_size, axis=2).reshape(N, self.num_experts)
 
         masked_scores = mx.where(mask, scores_for_routing, mx.array(-float("inf"), dtype=scores.dtype))
         topk_idx = mx.argpartition(-masked_scores, kth=self.top_k - 1, axis=-1)[:, :self.top_k]
@@ -343,18 +341,25 @@ class BailingSparseMoeBlock(nn.Module):
         shared_out = self.shared_experts(flat_x)
         topk_idx, weights = self.gate(x)
 
-        out = mx.zeros_like(flat_x)
-        topk_idx_list = topk_idx.tolist()
-        weights_list = weights.tolist()
-
-        for n in range(N):
-            x_n = flat_x[n:n+1]
-            token_out = mx.zeros((1, C), dtype=x.dtype)
-            for k in range(self.top_k):
-                e_id = topk_idx_list[n][k]
-                w = weights_list[n][k]
-                token_out = token_out + w * self.experts[e_id](x_n)
-            out[n:n+1] = token_out
+        if N == 1:
+            # Decode step: one token, its top-k experts in order (same summation as before).
+            idx = topk_idx[0].tolist()
+            w = weights[0].astype(x.dtype)
+            out = mx.zeros((1, C), dtype=x.dtype)
+            for k, e_id in enumerate(idx):
+                out = out + w[k] * self.experts[e_id](flat_x)
+        else:
+            # Prefill: run each selected expert once on all tokens routed to it, then scatter-add
+            # the weighted results (was N x top_k separate single-token calls).
+            import numpy as np
+            idx = np.array(topk_idx)                      # (N, K)
+            w = weights.astype(x.dtype)                   # (N, K)
+            out = mx.zeros((N, C), dtype=x.dtype)
+            for e_id in np.unique(idx).tolist():
+                rows, cols = np.nonzero(idx == e_id)
+                r = mx.array(rows)
+                y = self.experts[e_id](flat_x[r]) * w[r, mx.array(cols)][:, None]
+                out = out.at[r].add(y)
 
         out = out + shared_out
         return out.reshape(B, T, C)
