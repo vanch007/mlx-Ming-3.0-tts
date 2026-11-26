@@ -186,7 +186,7 @@ def load_single_resampled_wav(wav_path, target_sr=44100):
         wav_mx = wav_mx[src_left] * (1.0 - src_frac) + wav_mx[src_right] * src_frac
     return wav_mx[None, :]
 
-def load_and_resample_prompt(wav_path_or_paths, target_sr=44100):
+def load_and_resample_prompt(wav_path_or_paths, target_sr=44100, pad_front=True):
     """Pure MLX / standard wave loader and resampler supporting single or multiple reference audios."""
     if isinstance(wav_path_or_paths, (list, tuple)):
         parts = [load_single_resampled_wav(p, target_sr) for p in wav_path_or_paths]
@@ -197,7 +197,12 @@ def load_and_resample_prompt(wav_path_or_paths, target_sr=44100):
     align = int(1 / 12.5 * 1 * target_sr)
     rem = wav_mx.shape[-1] % align
     if rem:
-        wav_mx = mx.concatenate([wav_mx, mx.zeros((1, align - rem))], axis=1)
+        # 0.5B (dense): pad at the front, as the official MingTTS._pad_prompt_waveform does - the
+        # tail of the prompt seeds the latent history for the first decode step, so back padding
+        # hands the model trailing silence and it can stop at once. Tiny: the official
+        # ming_tiny/inference.py pads at the back, so keep that for it.
+        pad = mx.zeros((1, align - rem))
+        wav_mx = mx.concatenate([pad, wav_mx] if pad_front else [wav_mx, pad], axis=1)
     return wav_mx
 
 
@@ -210,6 +215,7 @@ class MingMLX:
         self.dtype = resolve_dtype(model_dir, dtype)
         self.tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
         is_tiny = metadata is not None and metadata.get("model_type") == "lingv3_tts"
+        self.is_tiny = is_tiny
         if is_tiny:
             print("Detected Ming-3.0-tts-tiny (LingV3TTS MoE+KDA) model architecture.")
             self.model = LingV3TTS(model_dir, self.tokenizer)
@@ -262,7 +268,7 @@ class MingMLX:
                     w, _ = sf.read(first_ref)
                     spk_emb = embedder(torch.from_numpy(w).float().unsqueeze(0))
             if prompt_text is not None:
-                prompt_waveform = load_and_resample_prompt(ref_audio, self.sample_rate)
+                prompt_waveform = load_and_resample_prompt(ref_audio, self.sample_rate, pad_front=not self.is_tiny)
                 if instruction is None and style is not None:
                     instruction = build_voice_design_instruction(style, is_chinese=is_chinese)
         elif instruction is None:

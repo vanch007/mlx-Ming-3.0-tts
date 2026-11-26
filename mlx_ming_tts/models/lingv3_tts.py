@@ -193,7 +193,12 @@ class LingV3TTS(nn.Module):
 
             stop_logits = self.stop_head(z_diff)[0][0]
             stop_prob = mx.softmax(stop_logits, axis=-1)[1]
-            is_last = bool(stop_prob > 0.5) and step > 3
+            # Official ming_tiny old_shift decode: the patch is sampled first, then a stop is
+            # allowed once len(generated) >= tts_config.minimum_decode_steps (13) and
+            # stop_p > stop_threshold. The 0.5B rule (step > 3) cut clips to ~0.2 s.
+            min_steps = int(self.tts_cfg.get("minimum_decode_steps", 4))
+            threshold = float(self.tts_cfg.get("stop_threshold", 0.5))
+            is_last = bool(stop_prob > threshold) and (step + 1) >= min_steps
             yield sampled, is_last
             if is_last:
                 break
