@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Dict, List, Mapping, Optional
 
 
@@ -79,6 +80,24 @@ THINKING_USER_PREFIX_NO_RML = (
 THINKING_TEXT_PREFIX = "\n Text input:\n"
 THINKING_TEXT_PREFIX_NO_RML = " Text input:\n"
 THINKING_ASSISTANT_PREFIX = "<role>ASSISTANT</role>\n<think></think>"
+
+
+# Official ming_tiny/prompt_contract._target_language_line: bundles converted with
+# enable_tts_target_language=true were trained with "Target language: X.\n" after the
+# description line; without it the prompt differs from training.
+_CHINESE_TEXT_PATTERN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
+_TTS_INLINE_CONTROL_PATTERN = re.compile(r"\[[^\]\n]{1,128}\]|\([A-Za-z][A-Za-z _-]{0,127}\)")
+_TTS_SPEAKER_LABEL_PATTERN = re.compile(r"(?im)^\s*speaker[_ ]?\d+\s*[:\uff1a]\s*")
+
+
+def target_language_line(target_text: str, tts_config: Mapping[str, object], target_language: str | None = None) -> str:
+    if not tts_config.get("enable_tts_target_language", False):
+        return ""
+    if target_language:
+        return f"Target language: {target_language}.\n"
+    lexical = _TTS_SPEAKER_LABEL_PATTERN.sub("", str(target_text))
+    lexical = _TTS_INLINE_CONTROL_PATTERN.sub("", lexical)
+    return f"Target language: {'Chinese' if _CHINESE_TEXT_PATTERN.search(lexical) else 'English'}.\n"
 
 
 def protocol_version(tts_config: Mapping[str, object]) -> str:
@@ -379,15 +398,25 @@ def _build_legacy_antmmf_prompt_ids(
     *,
     prompt_text: str | None = None,
     prompt_latent_tokens: int = 0,
+    instruction: str | None = None,
+    target_language: str | None = None,
+    assistant_instruction: bool = True,
 ) -> tuple[List[int], Optional[int]]:
     # Exact sample_instruct_tts(with_RML=True, RML_length=1,
     # with_caption=True, caption="") sequence.  There is deliberately no
     # SYSTEM prefix, EOS separator, or <think></think>.
+    # Official ming_tiny task protocol: the Target language line belongs to the instruction-free
+    # tasks (seed/multilingual/paralinguistic); instruction tasks (emotion/dialect/voice design/IP)
+    # omit it and, by default, put the instruction after the assistant role followed by EOS.
     rml_enabled = with_rml(tts_config)
-    ids = encode(
-        tokenizer,
-        LEGACY_USER_PREFIX if rml_enabled else LEGACY_USER_PREFIX_NO_RML,
-    )
+    user_prefix = LEGACY_USER_PREFIX_NO_RML
+    if instruction is None:
+        user_prefix += target_language_line(target_text, tts_config, target_language)
+    elif not assistant_instruction:
+        user_prefix += instruction + "\n"
+    if rml_enabled:
+        user_prefix += "  speaker_1:"
+    ids = encode(tokenizer, user_prefix)
     speaker_embedding_position: Optional[int] = None
     if rml_enabled:
         ids.append(int(tts_config["speaker_start_token_id"]))
@@ -404,6 +433,9 @@ def _build_legacy_antmmf_prompt_ids(
         ids.extend(encode(tokenizer, prompt_text))
     ids.extend(encode(tokenizer, target_text))
     ids.extend(encode(tokenizer, LEGACY_ASSISTANT_PREFIX))
+    if instruction is not None and assistant_instruction:
+        ids.extend(encode(tokenizer, instruction))
+        ids.append(tokenizer.eos_token_id)
     ids.append(int(tts_config["audio_start_token_id"]))
     ids.extend(
         [int(tts_config["audio_patch_token_id"])]
@@ -461,6 +493,8 @@ def build_tts_prompt_ids(
     *,
     prompt_text: str | None = None,
     prompt_latent_tokens: int = 0,
+    instruction: str | None = None,
+    target_language: str | None = None,
 ) -> tuple[List[int], Optional[int]]:
     """Build the LingV2-compatible zero-shot prompt token sequence.
 
@@ -491,6 +525,8 @@ def build_tts_prompt_ids(
             tts_config,
             prompt_text=prompt_text,
             prompt_latent_tokens=prompt_latent_tokens,
+            instruction=instruction,
+            target_language=target_language,
         )
     return _build_thinking_v1_prompt_ids(
         tokenizer,
@@ -499,3 +535,28 @@ def build_tts_prompt_ids(
         prompt_text=prompt_text,
         prompt_latent_tokens=prompt_latent_tokens,
     )
+
+
+# Official ming_tiny/task_protocol.py structured-control JSON: field order is semantic.
+TINY_CONTROL_FIELD_ORDER = ("序号", "说话人", "方言", "情感", "风格", "语速", "基频", "音量", "BGM", "IP")
+TINY_EMOTION_FIELD_ORDER = ("序号", "说话人", "方言", "风格", "语速", "基频", "音量", "情感", "BGM", "IP")
+_EN_TO_ZH_FIELDS = {"id": "序号", "speaker": "说话人", "dialect": "方言", "emotion": "情感", "style": "风格",
+                    "speed": "语速", "pitch": "基频", "volume": "音量", "ip": "IP", "bgm": "BGM"}
+
+
+def canonical_tiny_instruction(instruction: str | None) -> str | None:
+    """Re-serialize a structured instruction in the field order Ming-3.0-tts-tiny was trained on."""
+    if instruction is None:
+        return None
+    import json
+    try:
+        payload = json.loads(instruction)
+        item = payload["audio_sequence"][0]
+    except Exception:
+        return instruction  # free text (official freeform task): pass through
+    item = {_EN_TO_ZH_FIELDS.get(k, k): v for k, v in item.items()}
+    item.setdefault("序号", 1)
+    item.setdefault("说话人", "speaker_1")
+    item.setdefault("BGM", {name: None for name in ("Genre", "Mood", "Instrument", "Theme", "ENV", "SNR")})
+    order = TINY_EMOTION_FIELD_ORDER if item.get("情感") else TINY_CONTROL_FIELD_ORDER
+    return json.dumps({"audio_sequence": [{k: item.get(k) for k in order}]}, ensure_ascii=False)

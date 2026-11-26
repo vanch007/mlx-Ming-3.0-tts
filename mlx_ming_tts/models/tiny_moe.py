@@ -194,6 +194,7 @@ class MultiLatentAttention(nn.Module):
         self.kv_lora_rank = cfg.get("kv_lora_rank", 512)
         self.layer_idx = layer_idx
         self.rope_theta = cfg.get("rope_theta", 10000.0)
+        self.rope_interleave = bool(cfg.get("rope_interleave", False))
 
         self.q_a_proj = nn.Linear(self.hidden_size, self.q_lora_rank, bias=False)
         self.q_a_layernorm = nn.RMSNorm(self.q_lora_rank, eps=cfg.get("rms_norm_eps", 1e-6))
@@ -210,6 +211,11 @@ class MultiLatentAttention(nn.Module):
         self.g_proj = nn.Linear(self.hidden_size, self.num_heads, bias=False)
         self.dense = nn.Linear(self.num_heads * self.v_head_dim, self.hidden_size, bias=False)
         self.scaling = self.qk_head_dim ** -0.5
+
+    @staticmethod
+    def _deinterleave(x):
+        b, h, t, d = x.shape
+        return x.reshape(b, h, t, d // 2, 2).swapaxes(-1, -2).reshape(b, h, t, d)
 
     def __call__(self, x, positions, mask=None, cache: Optional[MLACache] = None):
         B, T, _ = x.shape
@@ -229,6 +235,11 @@ class MultiLatentAttention(nn.Module):
 
         k_rot = k_rot.reshape(B, T, 1, self.qk_rope_head_dim).transpose(0, 2, 1, 3)
 
+        if self.rope_interleave:
+            # Official apply_rotary_pos_emb_interleave: regroup adjacent pairs (view d/2,2 ->
+            # transpose -> reshape) before the rotate-half rotation.
+            q_rot = self._deinterleave(q_rot)
+            k_rot = self._deinterleave(k_rot)
         cos, sin = precompute_freqs(self.qk_rope_head_dim, positions, self.rope_theta)
         q_rot, k_rot = apply_rope(q_rot, k_rot, cos, sin)
         k_rot = mx.broadcast_to(k_rot, (B, self.num_heads, T, self.qk_rope_head_dim))
@@ -238,6 +249,14 @@ class MultiLatentAttention(nn.Module):
 
         if cache is not None:
             k_full, v = cache.update_and_fetch(k_full, v)
+
+        if mask is None and T > 1:
+            # The official MLA is causal (is_causal=True); without a mask MLX attends both ways
+            # over the whole prefill. Query i sits at absolute position (Tk - T + i).
+            Tk = k_full.shape[2]
+            q_pos = mx.arange(Tk - T, Tk)[:, None]
+            k_pos = mx.arange(Tk)[None, :]
+            mask = mx.where(k_pos <= q_pos, mx.array(0.0, dtype=q_full.dtype), mx.array(-float("inf"), dtype=q_full.dtype))
 
         attn_out = sdpa(q_full, k_full, v, scale=self.scaling, mask=mask)
         attn_out = attn_out.transpose(0, 2, 1, 3)
@@ -275,9 +294,11 @@ class BailingMoeGate(nn.Module):
     def __call__(self, x):
         B, T, C = x.shape
         flat_x = x.reshape(-1, C)
-        logits = flat_x @ self.weight.T
+        # Official gate: logits, sigmoid and expert_bias in fp32 (router_dtype=fp32); bf16 logits
+        # can flip Top-K expert choices.
+        logits = flat_x.astype(mx.float32) @ self.weight.astype(mx.float32).T
         scores = mx.sigmoid(logits)
-        scores_for_routing = scores + self.expert_bias[None, :]
+        scores_for_routing = scores + self.expert_bias.astype(mx.float32)[None, :]
 
         N = flat_x.shape[0]
         group_size = self.num_experts // self.n_group

@@ -257,6 +257,9 @@ class MingMLX:
         prompt_waveform = None
 
         spk_emb = kwargs.pop('spk_emb', None)
+        target_language = kwargs.pop('target_language', None)
+        if self.is_tiny and target_language:
+            kwargs['target_language'] = target_language  # Tiny only: official "Target language" line
         if ref_audio is not None:
             # 官方统一声学克隆规范：只要提供了参考音频，必须提取 192 维 CampPlus 向量锁定说话人音色！
             if spk_emb is None:

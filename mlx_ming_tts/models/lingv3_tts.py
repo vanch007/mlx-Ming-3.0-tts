@@ -1,4 +1,4 @@
-from .prompt_contract import build_tts_prompt_ids
+from .prompt_contract import build_tts_prompt_ids, canonical_tiny_instruction
 """LingV3 TTS (Ming-3.0-tts-tiny) MLX end-to-end model.
 
 Wraps BailingMoeV3ForCausalLM + AudioVAE + FlowLoss (depth=16) + Aggregator.
@@ -84,7 +84,7 @@ class LingV3TTS(nn.Module):
 
     def prepare_input_embed(self, prompt, text, spk_emb=None, instruction=None,
                             prompt_latent=None, prompt_text=None,
-                            target_language="Chinese"):
+                            target_language=None):
         """Tiny prompt assembly using official build_tts_prompt_ids."""
         tok = self.tokenizer
         
@@ -127,6 +127,8 @@ class LingV3TTS(nn.Module):
                 self.tts_cfg,
                 prompt_text=prompt_text,
                 prompt_latent_tokens=prompt_latent_tokens,
+                instruction=canonical_tiny_instruction(instruction),
+                target_language=target_language,
             )
             input_ids = prompt_ids
             inputs_embeds = self.token_embeddings(mx.array([input_ids]))
@@ -148,7 +150,7 @@ class LingV3TTS(nn.Module):
 
     def sample(self, prompt, text, spk_emb=None, instruction=None,
                prompt_waveform=None, prompt_text=None,
-               target_language="Chinese",
+               target_language=None,
                max_decode_steps=200, cfg=2.0, sigma=0.15, temperature=0,
                steps=10, noise_seed=42):
         if prompt_waveform is not None and prompt_text is not None:
@@ -210,7 +212,7 @@ class LingV3TTS(nn.Module):
 
     def generate(self, prompt, text, spk_emb=None, instruction=None,
                  prompt_waveform=None, prompt_text=None,
-                 target_language="Chinese",
+                 target_language=None,
                  max_decode_steps=200, cfg=2.0, sigma=0.15, temperature=0,
                  steps=10, noise_seed=42):
         latents = []
